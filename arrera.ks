@@ -5,9 +5,10 @@
 # 1. Inclusion de la base officielle Fedora Workstation
 %include https://pagure.io/fedora-kickstarts/raw/main/f/fedora-live-workstation.ks
 
-# 2. Source d'installation principale (Correction du bug Lorax)
+# 2. Source d'installation principale, dépôts et Réseau
 url --url="https://download.fedoraproject.org/pub/fedora/linux/releases/$releasever/Everything/$basearch/os/"
 repo --name=cachyos --baseurl=https://mirror.cachyos.org/fedora/$releasever/$basearch/ --install
+network --bootproto=dhcp --device=link --activate
 
 # 3. Sélection des paquets supplémentaires
 %packages
@@ -32,7 +33,7 @@ ImageMagick
 git
 %end
 
-# 4. Script de post-installation (exécuté dans l'environnement de l'ISO)
+# 4. Script de post-installation (exécuté dans la bulle isolée de l'ISO)
 %post --log=/root/arrera-post-install.log
 echo "=========================================="
 echo " DÉBUT DE LA CONFIGURATION ARRERA LINUX   "
