@@ -4,7 +4,7 @@
 # Script de configuration : Environnement de développement Arrera Linux V2
 # ==============================================================================
 
-# Vérification des privilèges root (nécessaire pour écrire dans /etc)[cite: 3]
+# Vérification des privilèges root (nécessaire pour écrire dans /etc)
 if [ "$EUID" -ne 0 ]; then
   echo "Erreur : Veuillez exécuter ce script en tant que root (ex: sudo ./setup-dev-env.sh)"
   exit 1
@@ -16,8 +16,9 @@ echo " Arrera Linux                             "
 echo "=========================================="
 
 REPO_DIR=$(pwd)
+ASSET_DIR="$REPO_DIR/assets"
 
-# 1. Configuration de l'identité du système[cite: 3]
+# 1. Configuration de l'identité du système
 echo "[1/7] Mise à jour de /etc/os-release..."
 cat <<EOF > /etc/os-release
 NAME="Arrera"
@@ -45,11 +46,11 @@ VARIANT="Workstation Edition"
 VARIANT_ID=workstation
 EOF
 
-# 2. Création du fichier de release et des liens symboliques[cite: 3]
+# 2. Création du fichier de release et des liens symboliques
 echo "[2/7] Création de /etc/arrera-release et des liens de compatibilité..."
 echo "Arrera release 0.0 (Blue-Dev)" > /etc/arrera-release
 
-# On supprime les anciens fichiers s'ils existent et on crée les liens symboliques[cite: 3]
+# On supprime les anciens fichiers s'ils existent et on crée les liens symboliques
 for release_file in fedora-release system-release redhat-release; do
     if [ -f "/etc/$release_file" ] || [ -L "/etc/$release_file" ]; then
         rm -f "/etc/$release_file"
@@ -57,23 +58,17 @@ for release_file in fedora-release system-release redhat-release; do
     ln -s /etc/arrera-release "/etc/$release_file"
 done
 
-# 3. Modification du gestionnaire de démarrage GRUB[cite: 3]
+# 3. Modification du gestionnaire de démarrage GRUB
 echo "[3/7] Configuration du menu de démarrage GRUB..."
-# On remplace la ligne GRUB_DISTRIBUTOR par le nom du projet[cite: 3]
 sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Arrera Linux"/' /etc/default/grub
 
-# 4. Téléchargement des assets et configuration de Fastfetch
-echo "[4/7] Téléchargement des assets et configuration Fastfetch..."
-ASSET_REPO_URL="https://github.com/Arrera-Software/REMPLACER_PAR_LE_NOM_DU_REPO_ASSETS.git"
-TMP_DIR="/tmp/arrera-assets-temp"
+# 4. Installation des assets locaux et configuration Fastfetch
+echo "[4/7] Installation des assets visuels et configuration Fastfetch..."
 
-# Clonage temporaire du dépôt d'assets
-git clone "$ASSET_REPO_URL" "$TMP_DIR"
-
-# Installation du logo système
-if [ -f "$TMP_DIR/arrera-logo.png" ]; then
+# Installation du logo système depuis le dossier local
+if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
     mkdir -p /usr/share/icons/hicolor/512x512/apps/
-    cp "$TMP_DIR/arrera-logo.png" /usr/share/icons/hicolor/512x512/apps/
+    cp "$ASSET_DIR/arrera-logo.png" /usr/share/icons/hicolor/512x512/apps/
     gtk-update-icon-cache /usr/share/icons/hicolor/
 fi
 
@@ -98,12 +93,12 @@ if [ -d "$REPO_DIR/configs/plymouth" ]; then
     cp "$REPO_DIR/configs/plymouth/arrera.script" /usr/share/plymouth/themes/arrera/
 fi
 
-# Récupération de l'animation Fedora (Spinner)
+# Récupération de l'animation Fedora (Spinner) depuis le système
 cp /usr/share/plymouth/themes/spinner/throbber-*.png /usr/share/plymouth/themes/arrera/
 
-# Récupération du logo Plymouth redimensionné (250x250)
-if [ -f "$TMP_DIR/logo.png" ]; then
-    cp "$TMP_DIR/logo.png" /usr/share/plymouth/themes/arrera/
+# Installation du logo Plymouth local
+if [ -f "$ASSET_DIR/logo.png" ]; then
+    cp "$ASSET_DIR/logo.png" /usr/share/plymouth/themes/arrera/
 fi
 
 # Application de Plymouth et reconstruction de l'initramfs
@@ -118,17 +113,14 @@ if [ -f "$REPO_DIR/configs/99-arrera-login" ]; then
     cp "$REPO_DIR/configs/99-arrera-login" /etc/dconf/db/gdm.d/
 fi
 
-# Logo GDM blanc
-if [ -f "$TMP_DIR/arrera_gdm_logo_white.png" ]; then
-    cp "$TMP_DIR/arrera_gdm_logo_white.png" /usr/share/pixmaps/
+# Logo GDM blanc local
+if [ -f "$ASSET_DIR/arrera_gdm_logo_white.png" ]; then
+    cp "$ASSET_DIR/arrera_gdm_logo_white.png" /usr/share/pixmaps/
 fi
 
 dconf update
 
-# Nettoyage des assets téléchargés
-rm -rf "$TMP_DIR"
-
-# Régénération finale de GRUB[cite: 3]
+# Régénération finale de GRUB
 echo "Régénération de grub.cfg..."
 grub2-mkconfig -o /boot/grub2/grub.cfg
 
@@ -148,6 +140,4 @@ fi
 
 echo "=========================================="
 echo " Terminé ! L'environnement est configuré. "
-echo " Veuillez redémarrer la machine pour      "
-echo " vérifier les écrans de démarrage.        "
 echo "=========================================="

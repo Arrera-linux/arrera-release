@@ -3,7 +3,8 @@
 # ==============================================================================
 
 # 1. Inclusion de la base officielle Fedora Workstation
-%include /usr/share/spin-kickstarts/fedora-live-workstation.ks
+# %include https://pagure.io/fedora-kickstarts/raw/main/f/fedora-live-workstation.ks
+%include https://pagure.io/fedora-kickstarts/raw/main/f/fedora-live-workstation.ks
 
 # 2. Ajout du dépôt tiers pour le noyau optimisé CachyOS
 repo --name=cachyos --baseurl=https://mirror.cachyos.org/fedora/$releasever/$basearch/ --install
@@ -12,6 +13,9 @@ repo --name=cachyos --baseurl=https://mirror.cachyos.org/fedora/$releasever/$bas
 %packages
 # Noyau optimisé
 kernel-cachyos
+
+# Outils de création Live (Requis pour l'ISO)
+dracut-live
 
 # Dépendances système pour les assistants IA et le gestionnaire d'applications
 python3
