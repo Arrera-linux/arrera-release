@@ -5,8 +5,8 @@
 # 1. Inclusion de la base officielle Fedora Workstation
 %include https://pagure.io/fedora-kickstarts/raw/main/f/fedora-live-workstation.ks
 
-# 2. Source d'installation principale et ajout du dépôt tiers CachyOS
-url --mirrorlist=https://mirrors.fedoraproject.org/mirrorlist?repo=fedora-$releasever&arch=$basearch
+# 2. Source d'installation principale (Correction du bug Lorax)
+url --url="https://download.fedoraproject.org/pub/fedora/linux/releases/$releasever/Everything/$basearch/os/"
 repo --name=cachyos --baseurl=https://mirror.cachyos.org/fedora/$releasever/$basearch/ --install
 
 # 3. Sélection des paquets supplémentaires
