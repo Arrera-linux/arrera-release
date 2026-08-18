@@ -2,8 +2,8 @@
 # Fichier Kickstart : Arrera Linux (Base Fedora Workstation)
 # ==============================================================================
 
-# 1. Inclusion de la base officielle Fedora Workstation
-%include https://pagure.io/fedora-kickstarts/raw/main/f/fedora-live-workstation.ks
+# 1. Inclusion de la base officielle Fedora Workstation (Dossier local)
+%include /root/arrera-release/fedora-kickstarts/fedora-live-workstation.ks
 
 # 2. Source d'installation principale, dépôts et Réseau
 url --url="https://download.fedoraproject.org/pub/fedora/linux/releases/$releasever/Everything/$basearch/os/"
