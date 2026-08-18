@@ -10,6 +10,10 @@ url --url="https://download.fedoraproject.org/pub/fedora/linux/releases/$release
 repo --name=cachyos --baseurl=https://mirror.cachyos.org/fedora/$releasever/$basearch/ --install
 network --bootproto=dhcp --device=link --activate
 
+# --- DÉFINITION DE LA PARTITION VIRTUELLE POUR L'ISO ---
+clearpart --all
+part / --size=8192 --fstype=ext4
+
 # 3. Sélection des paquets supplémentaires
 %packages
 # Noyau optimisé
