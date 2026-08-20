@@ -3,6 +3,10 @@
 # ==============================================================================
 # Script de configuration : Environnement de développement Arrera Linux V2
 # ==============================================================================
+# Ce script peut être exécuté :
+#   - Manuellement sur un système existant : sudo ./setup-dev-env.sh
+#   - Depuis le %post du kickstart : le build_iso.sh l'injecte automatiquement
+# ==============================================================================
 
 # Vérification des privilèges root (nécessaire pour écrire dans /etc)
 if [ "$EUID" -ne 0 ]; then
@@ -15,8 +19,10 @@ echo " Configuration de l'environnement de dev  "
 echo " Arrera Linux                             "
 echo "=========================================="
 
-REPO_DIR=$(pwd)
-ASSET_DIR="$REPO_DIR/assets"
+# En mode kickstart, ARRERA_ROOT est défini par le %post.
+# En mode manuel, on utilise le répertoire courant.
+REPO_DIR="${ARRERA_ROOT:-$(pwd)}"
+ASSET_DIR="$REPO_DIR/asset"
 
 # 1. Configuration de l'identité du système
 echo "[1/7] Mise à jour de /etc/os-release..."
@@ -60,7 +66,9 @@ done
 
 # 3. Modification du gestionnaire de démarrage GRUB
 echo "[3/7] Configuration du menu de démarrage GRUB..."
-sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Arrera Linux"/' /etc/default/grub
+if [ -f /etc/default/grub ]; then
+    sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Arrera Linux"/' /etc/default/grub
+fi
 
 # 4. Installation des assets locaux et configuration Fastfetch
 echo "[4/7] Installation des assets visuels et configuration Fastfetch..."
@@ -69,7 +77,8 @@ echo "[4/7] Installation des assets visuels et configuration Fastfetch..."
 if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
     mkdir -p /usr/share/icons/hicolor/512x512/apps/
     cp "$ASSET_DIR/arrera-logo.png" /usr/share/icons/hicolor/512x512/apps/
-    gtk-update-icon-cache /usr/share/icons/hicolor/
+    # gtk-update-icon-cache peut échouer dans le chroot, on l'ignore
+    gtk-update-icon-cache /usr/share/icons/hicolor/ 2>/dev/null || true
 fi
 
 # Installation de Fastfetch (JSON et logo ASCII)
@@ -79,30 +88,38 @@ if [ -d "$REPO_DIR/configs" ]; then
         cp "$REPO_DIR/configs/fastfetch-config.jsonc" /etc/fastfetch/config.jsonc
     fi
     if [ -f "$REPO_DIR/configs/arrera-logo.txt" ]; then
+        # Le fichier de config fastfetch attend /etc/fastfetch/arrera-logo.txt
         cp "$REPO_DIR/configs/arrera-logo.txt" /etc/fastfetch/arrera-logo.txt
     fi
 fi
 
 # 5. Configuration de l'écran de démarrage (Plymouth)
 echo "[5/7] Configuration du thème Plymouth..."
-mkdir -p /usr/share/plymouth/themes/arrera/
 
-# Fichiers de configuration Plymouth
-if [ -d "$REPO_DIR/configs/plymouth" ]; then
+if [ -d "$REPO_DIR/configs/plymouth" ] && \
+   [ -f "$REPO_DIR/configs/plymouth/arrera.plymouth" ] && \
+   [ -f "$REPO_DIR/configs/plymouth/arrera.script" ]; then
+
+    mkdir -p /usr/share/plymouth/themes/arrera/
     cp "$REPO_DIR/configs/plymouth/arrera.plymouth" /usr/share/plymouth/themes/arrera/
     cp "$REPO_DIR/configs/plymouth/arrera.script" /usr/share/plymouth/themes/arrera/
+
+    # Récupération de l'animation Fedora (Spinner) depuis le système
+    if [ -d /usr/share/plymouth/themes/spinner ]; then
+        cp /usr/share/plymouth/themes/spinner/throbber-*.png /usr/share/plymouth/themes/arrera/ 2>/dev/null || true
+    fi
+
+    # Installation du logo Plymouth local
+    if [ -f "$ASSET_DIR/logo.png" ]; then
+        cp "$ASSET_DIR/logo.png" /usr/share/plymouth/themes/arrera/
+    fi
+
+    # Application de Plymouth et reconstruction de l'initramfs
+    plymouth-set-default-theme -R arrera 2>/dev/null || true
+else
+    echo "  [SKIP] Fichiers Plymouth non trouvés dans $REPO_DIR/configs/plymouth/"
+    echo "         Le thème Plymouth personnalisé ne sera pas installé."
 fi
-
-# Récupération de l'animation Fedora (Spinner) depuis le système
-cp /usr/share/plymouth/themes/spinner/throbber-*.png /usr/share/plymouth/themes/arrera/
-
-# Installation du logo Plymouth local
-if [ -f "$ASSET_DIR/logo.png" ]; then
-    cp "$ASSET_DIR/logo.png" /usr/share/plymouth/themes/arrera/
-fi
-
-# Application de Plymouth et reconstruction de l'initramfs
-plymouth-set-default-theme -R arrera
 
 # 6. Configuration de l'écran de connexion (GDM)
 echo "[6/7] Configuration de GDM..."
@@ -113,30 +130,36 @@ if [ -f "$REPO_DIR/configs/99-arrera-login" ]; then
     cp "$REPO_DIR/configs/99-arrera-login" /etc/dconf/db/gdm.d/
 fi
 
-# Logo GDM blanc local
-if [ -f "$ASSET_DIR/arrera_gdm_logo_white.png" ]; then
-    cp "$ASSET_DIR/arrera_gdm_logo_white.png" /usr/share/pixmaps/
+# Logo GDM depuis les assets locaux
+if [ -f "$ASSET_DIR/arrera_gdm_logo_dark.png" ]; then
+    cp "$ASSET_DIR/arrera_gdm_logo_dark.png" /usr/share/pixmaps/
 fi
 
-dconf update
+dconf update 2>/dev/null || true
 
-# Régénération finale de GRUB
-echo "Régénération de grub.cfg..."
-grub2-mkconfig -o /boot/grub2/grub.cfg
-
-# 7. Désactivation des pop-ups GPaste
-echo "[7/7] Configuration des paramètres utilisateur GNOME..."
-if [ -n "$SUDO_USER" ]; then
-    su - "$SUDO_USER" -c "
-        gsettings set org.gnome.GPaste.keybindings launch-ui ''
-        gsettings set org.gnome.GPaste.keybindings pop-from-history ''
-        gsettings set org.gnome.GPaste.keybindings show-history ''
-        gsettings set org.gnome.GPaste.keybindings sync-clipboard-to-primary ''
-        gsettings set org.gnome.GPaste.keybindings sync-primary-to-clipboard ''
-        gsettings set org.gnome.GPaste.keybindings upload-to-pastebin ''
-        gsettings set org.gnome.GPaste.keybindings convert-to-password ''
-    "
+# Régénération finale de GRUB (peut échouer dans le chroot)
+if [ -f /etc/default/grub ]; then
+    echo "Régénération de grub.cfg..."
+    grub2-mkconfig -o /boot/grub2/grub.cfg 2>/dev/null || true
 fi
+
+# 7. Configuration des paramètres GNOME via dconf (fonctionne sans session graphique)
+echo "[7/7] Configuration des paramètres GNOME (dconf)..."
+
+# Désactivation des raccourcis GPaste via un fichier dconf utilisateur
+mkdir -p /etc/dconf/db/local.d/
+cat > /etc/dconf/db/local.d/99-arrera-gpaste <<'DCONF_EOF'
+[org/gnome/GPaste/keybindings]
+launch-ui=''
+pop-from-history=''
+show-history=''
+sync-clipboard-to-primary=''
+sync-primary-to-clipboard=''
+upload-to-pastebin=''
+convert-to-password=''
+DCONF_EOF
+
+dconf update 2>/dev/null || true
 
 echo "=========================================="
 echo " Terminé ! L'environnement est configuré. "

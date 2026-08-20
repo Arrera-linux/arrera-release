@@ -1,0 +1,54 @@
+# ==============================================================================
+# Arrera Linux - Plymouth Boot Script
+# ==============================================================================
+# Affiche le logo centré avec une animation de chargement (throbber)
+
+# --------------------------------------------------------------------------
+# Arrière-plan
+# --------------------------------------------------------------------------
+Window.SetBackgroundTopColor(0.12, 0.12, 0.14);
+Window.SetBackgroundBottomColor(0.06, 0.06, 0.08);
+
+# --------------------------------------------------------------------------
+# Logo centré
+# --------------------------------------------------------------------------
+logo_image = Image("logo.png");
+logo_sprite = Sprite(logo_image);
+logo_sprite.SetX(Window.GetWidth() / 2 - logo_image.GetWidth() / 2);
+logo_sprite.SetY(Window.GetHeight() / 2 - logo_image.GetHeight() / 2 - 40);
+
+# --------------------------------------------------------------------------
+# Animation de chargement (throbber) — utilise les images spinner de Fedora
+# --------------------------------------------------------------------------
+throbber_count = 0;
+for (i = 0; Image("throbber-" + i + ".png"); i++) {
+    throbber_images[i] = Image("throbber-" + i + ".png");
+    throbber_count++;
+}
+
+throbber_sprite = Sprite();
+throbber_sprite.SetX(Window.GetWidth() / 2 - throbber_images[0].GetWidth() / 2);
+throbber_sprite.SetY(Window.GetHeight() / 2 + logo_image.GetHeight() / 2 + 20);
+
+frame = 0;
+
+fun refresh_callback() {
+    throbber_sprite.SetImage(throbber_images[Math.Int(frame) % throbber_count]);
+    frame += 0.3;
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);
+
+# --------------------------------------------------------------------------
+# Messages (mot de passe disque chiffré, etc.)
+# --------------------------------------------------------------------------
+message_sprite = Sprite();
+message_sprite.SetPosition(Window.GetWidth() / 2, Window.GetHeight() - 50, 10000);
+
+fun message_callback(text) {
+    msg_image = Image.Text(text, 0.8, 0.8, 0.8);
+    message_sprite.SetImage(msg_image);
+    message_sprite.SetX(Window.GetWidth() / 2 - msg_image.GetWidth() / 2);
+}
+
+Plymouth.SetMessageFunction(message_callback);

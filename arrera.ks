@@ -1,6 +1,11 @@
 # ==============================================================================
 # Arrera Linux - Kickstart autonome basé sur Fedora Workstation
 # ==============================================================================
+# IMPORTANT : Ce fichier est un TEMPLATE.
+# Le script build_iso.sh remplace le placeholder __SETUP_DEV_ENV__ par le
+# contenu réel de setup-dev-env.sh et génère le .ks final.
+# NE PAS utiliser ce fichier directement avec livemedia-creator.
+# ==============================================================================
 
 # --------------------------------------------------------------------------
 # Configuration générale
@@ -66,7 +71,7 @@ tar
 unzip
 gzip
 bzip2
- htop
+htop
 fastfetch
 
 # Python et Qt
@@ -115,21 +120,27 @@ systemctl enable NetworkManager
 systemctl enable gdm
 systemctl enable firewalld
 
-# Création du dossier Arrera
-mkdir -p /opt/arrera
+# Création du dossier Arrera pour les assets
+mkdir -p /opt/arrera/asset
+mkdir -p /opt/arrera/configs/plymouth
 
-# Le contenu de setup-dev-env.sh sera inséré ici
-cat > /opt/setup-dev-env.sh <<'SETUP_SCRIPT_EOF'
+# --- DÉBUT : Assets encodés en base64 (injectés par build_iso.sh) ---
+__ASSETS_BASE64__
+# --- FIN : Assets encodés en base64 ---
+
+# Le contenu de setup-dev-env.sh est injecté ci-dessous par build_iso.sh
+cat > /opt/arrera/setup-dev-env.sh <<'SETUP_SCRIPT_EOF'
 __SETUP_DEV_ENV__
 SETUP_SCRIPT_EOF
 
-chmod +x /opt/setup-dev-env.sh
+chmod +x /opt/arrera/setup-dev-env.sh
 
-# Exécution du script de configuration
-/opt/setup-dev-env.sh
+# Exécution du script de configuration avec le bon répertoire racine
+export ARRERA_ROOT="/opt/arrera"
+/opt/arrera/setup-dev-env.sh
 
 # Nettoyage
-rm -f /opt/setup-dev-env.sh
+rm -rf /opt/arrera
 
 echo "=========================================="
 echo " FIN DE LA CONFIGURATION ARRERA LINUX    "
