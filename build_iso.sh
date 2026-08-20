@@ -232,9 +232,7 @@ livemedia-creator \
     --volid "$VOLID" \
     --iso-only \
     --iso-name "$ISO_NAME" \
-    --releasever 44 \
-    --title "Arrera Linux" \
-    --macboot
+    --releasever 44
 
 BUILD_STATUS=$?
 
