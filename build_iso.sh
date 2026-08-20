@@ -219,6 +219,13 @@ warn "Mode --no-virt : l'installation s'exécute directement sur ce système."
 warn "Assurez-vous d'être dans une VM dédiée à la compilation."
 echo ""
 
+# Désactivation temporaire de SELinux (cause des échecs de démontage)
+SELINUX_WAS_ENFORCING=false
+if command -v getenforce &>/dev/null && [ "$(getenforce)" = "Enforcing" ]; then
+    info "Passage de SELinux en mode Permissive (temporaire)..."
+    setenforce 0
+    SELINUX_WAS_ENFORCING=true
+fi
 livemedia-creator \
     --ks "$KS_FINAL" \
     --no-virt \
@@ -231,6 +238,12 @@ livemedia-creator \
     --releasever 44
 
 BUILD_STATUS=$?
+
+# Restauration de SELinux si nécessaire
+if [ "$SELINUX_WAS_ENFORCING" = true ]; then
+    info "Restauration de SELinux en mode Enforcing..."
+    setenforce 1
+fi
 
 # --------------------------------------------------------------------------
 # 7. Résultat

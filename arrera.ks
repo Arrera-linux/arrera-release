@@ -21,6 +21,7 @@ network --hostname=arrera-linux
 # Compte utilisateur
 rootpw --lock
 user --name=arrera --groups=wheel --plaintext --password=arrera
+selinux --permissive
 
 
 # --------------------------------------------------------------------------
@@ -98,6 +99,11 @@ firewalld
 # --------------------------------------------------------------------------
 # Configuration après installation
 # --------------------------------------------------------------------------
+
+%post --log=/root/arrera-post-install.log --nochroot
+# Nettoyage préventif : s'assurer que /mnt/sysimage/run est propre
+umount -l /mnt/sysimage/run/user/* 2>/dev/null || true
+%end
 
 %post --log=/root/arrera-post-install.log
 set -eux
