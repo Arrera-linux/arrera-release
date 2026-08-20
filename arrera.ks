@@ -29,13 +29,10 @@ user --name=arrera --groups=wheel --plaintext --password=arrera
 
 url --url="https://download.fedoraproject.org/pub/fedora/linux/releases/$releasever/Everything/$basearch/os/"
 
-# --------------------------------------------------------------------------
-# Partitionnement
-# --------------------------------------------------------------------------
-
+# Partitionnement (taille fixe requise par livemedia-creator --no-virt)
 zerombr
 clearpart --all --initlabel
-autopart --type=plain
+part / --size=10240 --fstype=ext4
 
 # --------------------------------------------------------------------------
 # Services
