@@ -1,61 +1,138 @@
 # ==============================================================================
-# Fichier Kickstart : Arrera Linux (Base Fedora Workstation)
+# Arrera Linux - Kickstart autonome basé sur Fedora Workstation
 # ==============================================================================
 
-# 1. Inclusion de la base officielle Fedora Workstation (Dossier local)
-%include /root/arrera-release/fedora-kickstarts/fedora-live-workstation.ks
+# --------------------------------------------------------------------------
+# Configuration générale
+# --------------------------------------------------------------------------
 
-# 2. Source d'installation principale, dépôts et Réseau
-url --url="https://download.fedoraproject.org/pub/fedora/linux/releases/$releasever/Everything/$basearch/os/"
-repo --name=cachyos --baseurl=https://mirror.cachyos.org/fedora/$releasever/$basearch/ --install
+lang fr_FR.UTF-8
+keyboard fr
+timezone Europe/Paris --utc
+
 network --bootproto=dhcp --device=link --activate
+network --hostname=arrera-linux
 
-# --- DÉFINITION DE LA PARTITION VIRTUELLE POUR L'ISO ---
-clearpart --all
-part / --size=8192 --fstype=ext4
+# Compte utilisateur
+rootpw --lock
+user --name=arrera --groups=wheel --plaintext --password=arrera
 
-# 3. Sélection des paquets supplémentaires
-%packages
-# Noyau optimisé
-kernel-cachyos
+# Mode graphique
+graphical
 
-# Outils de création Live (Requis pour l'ISO)
+# --------------------------------------------------------------------------
+# Dépôts
+# --------------------------------------------------------------------------
+
+url --url="https://download.fedoraproject.org/pub/fedora/linux/releases/$releasever/Everything/$basearch/os/"
+
+# --------------------------------------------------------------------------
+# Partitionnement
+# --------------------------------------------------------------------------
+
+zerombr
+clearpart --all --initlabel
+autopart --type=plain
+
+# --------------------------------------------------------------------------
+# Services
+# --------------------------------------------------------------------------
+
+services --enabled=NetworkManager,gdm,firewalld
+
+# --------------------------------------------------------------------------
+# Paquets
+# --------------------------------------------------------------------------
+
+%packages --ignoremissing
+
+@^workstation-product-environment
+
+# Noyau et démarrage
+kernel
 dracut-live
+grub2-efi-x64
+shim-x64
 
-# Dépendances système pour les assistants IA et le gestionnaire d'applications
+# Outils système
+sudo
+vim-enhanced
+nano
+git
+curl
+wget
+rsync
+tar
+unzip
+gzip
+bzip2
+ htop
+fastfetch
+
+# Python et Qt
 python3
+python3-pip
 qt5-qtbase
 
-# Dépendances pour les extensions GNOME internes
-gpaste
-forge
+# Extensions GNOME
+gnome-shell-extension-appindicator
+gnome-shell-extension-forge
+gnome-shell-extension-gpaste
+gnome-tweaks
 
-# Dépendances pour l'identité visuelle Arrera
+# Identité visuelle
 chafa
-plymouth-plugin-script
 ImageMagick
-git
+plymouth
+plymouth-plugin-script
+
+# Audio, vidéo et réseau
+pipewire
+pipewire-pulseaudio
+wireplumber
+NetworkManager-wifi
+firewalld
+
 %end
 
-# 4. Script de post-installation (exécuté dans la bulle isolée de l'ISO)
+# --------------------------------------------------------------------------
+# Configuration après installation
+# --------------------------------------------------------------------------
+
 %post --log=/root/arrera-post-install.log
-echo "=========================================="
-echo " DÉBUT DE LA CONFIGURATION ARRERA LINUX   "
-echo "=========================================="
-
-# Clonage de ton dépôt builder public contenant les configurations et le script
-git clone https://github.com/Arrera-linux/arrera-release.git /tmp/builder
-
-# Exécution du script de déploiement
-cd /tmp/builder
-chmod +x setup-dev-env.sh
-./setup-dev-env.sh
-
-# Nettoyage des fichiers temporaires
-cd /
-rm -rf /tmp/builder
+set -eux
 
 echo "=========================================="
-echo " FIN DE LA CONFIGURATION ARRERA LINUX     "
+echo " DÉBUT DE LA CONFIGURATION ARRERA LINUX  "
 echo "=========================================="
+
+# Configuration sudo
+echo "arrera ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/arrera
+chmod 0440 /etc/sudoers.d/arrera
+
+# Activation des services
+systemctl enable NetworkManager
+systemctl enable gdm
+systemctl enable firewalld
+
+# Création du dossier Arrera
+mkdir -p /opt/arrera
+
+# Le contenu de setup-dev-env.sh sera inséré ici
+cat > /opt/setup-dev-env.sh <<'SETUP_SCRIPT_EOF'
+__SETUP_DEV_ENV__
+SETUP_SCRIPT_EOF
+
+chmod +x /opt/setup-dev-env.sh
+
+# Exécution du script de configuration
+/opt/setup-dev-env.sh
+
+# Nettoyage
+rm -f /opt/setup-dev-env.sh
+
+echo "=========================================="
+echo " FIN DE LA CONFIGURATION ARRERA LINUX    "
+echo "=========================================="
+
 %end
