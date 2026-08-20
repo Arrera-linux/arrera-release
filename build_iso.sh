@@ -168,17 +168,18 @@ cp "$KS_TEMPLATE" "$KS_FINAL"
 # Écrire les blocs dans des fichiers temporaires pour sed 'r'
 echo "$ASSETS_BLOCK" > "$BUILD_DIR/assets_block.tmp"
 
-# Retirer la ligne 'graphical' (livemedia-creator interdit les modes d'affichage)
+# Retirer la ligne 'graphical' si présente (livemedia-creator interdit les modes d'affichage)
 sed -i '/^graphical$/d' "$KS_FINAL"
 
 # Passe 1 : remplacer __ASSETS_BASE64__ par le contenu des assets
-sed -e "/__ASSETS_BASE64__/{
+# Les ancres ^...$ garantissent qu'on ne matche pas les commentaires
+sed -e "/^__ASSETS_BASE64__$/{
     r $BUILD_DIR/assets_block.tmp
     d
 }" "$KS_FINAL" > "${KS_FINAL}.tmp1"
 
 # Passe 2 : remplacer __SETUP_DEV_ENV__ par le contenu du script
-sed -e "/__SETUP_DEV_ENV__/{
+sed -e "/^__SETUP_DEV_ENV__$/{
     r $SETUP_SCRIPT
     d
 }" "${KS_FINAL}.tmp1" > "$KS_FINAL"
@@ -188,8 +189,8 @@ rm -f "${KS_FINAL}.tmp1" "$BUILD_DIR/assets_block.tmp"
 
 ok "Kickstart final généré : $KS_FINAL"
 
-# Vérification rapide
-if grep -q "__SETUP_DEV_ENV__\|__ASSETS_BASE64__" "$KS_FINAL"; then
+# Vérification rapide (cherche les placeholders seuls sur une ligne)
+if grep -qE "^__(SETUP_DEV_ENV|ASSETS_BASE64)__$" "$KS_FINAL"; then
     error "Des placeholders n'ont pas été remplacés dans le kickstart final !"
 fi
 ok "Vérification des placeholders OK — tous remplacés."

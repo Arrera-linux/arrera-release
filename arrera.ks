@@ -2,8 +2,8 @@
 # Arrera Linux - Kickstart autonome basé sur Fedora Workstation
 # ==============================================================================
 # IMPORTANT : Ce fichier est un TEMPLATE.
-# Le script build_iso.sh remplace le placeholder __SETUP_DEV_ENV__ par le
-# contenu réel de setup-dev-env.sh et génère le .ks final.
+# Le script build_iso.sh remplace les placeholders par le contenu réel
+# de setup-dev-env.sh et des assets, puis génère le .ks final.
 # NE PAS utiliser ce fichier directement avec livemedia-creator.
 # ==============================================================================
 
@@ -22,8 +22,6 @@ network --hostname=arrera-linux
 rootpw --lock
 user --name=arrera --groups=wheel --plaintext --password=arrera
 
-# Mode graphique
-graphical
 
 # --------------------------------------------------------------------------
 # Dépôts
@@ -128,7 +126,7 @@ mkdir -p /opt/arrera/configs/plymouth
 __ASSETS_BASE64__
 # --- FIN : Assets encodés en base64 ---
 
-# Le contenu de setup-dev-env.sh est injecté ci-dessous par build_iso.sh
+# Le contenu du script de setup est injecté ci-dessous par build_iso.sh
 cat > /opt/arrera/setup-dev-env.sh <<'SETUP_SCRIPT_EOF'
 __SETUP_DEV_ENV__
 SETUP_SCRIPT_EOF
