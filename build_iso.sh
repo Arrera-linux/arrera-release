@@ -165,31 +165,26 @@ info "Assemblage du kickstart final..."
 # Lire le template
 cp "$KS_TEMPLATE" "$KS_FINAL"
 
-# Remplacer __ASSETS_BASE64__ par les commandes de décodage
-# On utilise un fichier temporaire pour le remplacement multi-lignes
-ASSETS_ESCAPED=$(echo "$ASSETS_BLOCK" | sed 's/[&/\]/\\&/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+# Écrire les blocs dans des fichiers temporaires pour sed 'r'
+echo "$ASSETS_BLOCK" > "$BUILD_DIR/assets_block.tmp"
 
-# Méthode plus fiable : utiliser awk pour le remplacement
-awk -v assets="$ASSETS_BLOCK" '{
-    if ($0 ~ /__ASSETS_BASE64__/) {
-        print assets
-    } else {
-        print
-    }
-}' "$KS_TEMPLATE" > "${KS_FINAL}.tmp1"
+# Retirer la ligne 'graphical' (livemedia-creator interdit les modes d'affichage)
+sed -i '/^graphical$/d' "$KS_FINAL"
 
-# Remplacer __SETUP_DEV_ENV__ par le contenu du script
-SETUP_CONTENT=$(cat "$SETUP_SCRIPT")
-awk -v script="$SETUP_CONTENT" '{
-    if ($0 ~ /__SETUP_DEV_ENV__/) {
-        print script
-    } else {
-        print
-    }
-}' "${KS_FINAL}.tmp1" > "$KS_FINAL"
+# Passe 1 : remplacer __ASSETS_BASE64__ par le contenu des assets
+sed -e "/__ASSETS_BASE64__/{
+    r $BUILD_DIR/assets_block.tmp
+    d
+}" "$KS_FINAL" > "${KS_FINAL}.tmp1"
+
+# Passe 2 : remplacer __SETUP_DEV_ENV__ par le contenu du script
+sed -e "/__SETUP_DEV_ENV__/{
+    r $SETUP_SCRIPT
+    d
+}" "${KS_FINAL}.tmp1" > "$KS_FINAL"
 
 # Nettoyage des fichiers temporaires
-rm -f "${KS_FINAL}.tmp1"
+rm -f "${KS_FINAL}.tmp1" "$BUILD_DIR/assets_block.tmp"
 
 ok "Kickstart final généré : $KS_FINAL"
 
