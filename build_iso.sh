@@ -227,6 +227,14 @@ if command -v getenforce &>/dev/null && [ "$(getenforce)" = "Enforcing" ]; then
     SELINUX_WAS_ENFORCING=true
 fi
 
+# Nettoyage des fichiers PID résiduels d'Anaconda (évite "anaconda.pid already exists")
+for pidfile in /run/anaconda.pid /run/user/0/anaconda.pid /var/run/anaconda.pid; do
+    if [ -f "$pidfile" ]; then
+        warn "Suppression du fichier PID résiduel : $pidfile"
+        rm -f "$pidfile"
+    fi
+done
+
 # --- Indicateur de progression en arrière-plan ---
 BUILD_START_TIME=$(date +%s)
 LMC_LOG="$BUILD_DIR/livemedia-creator.log"
