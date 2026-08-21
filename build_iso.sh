@@ -226,6 +226,38 @@ if command -v getenforce &>/dev/null && [ "$(getenforce)" = "Enforcing" ]; then
     setenforce 0
     SELINUX_WAS_ENFORCING=true
 fi
+
+# --- Indicateur de progression en arrière-plan ---
+BUILD_START_TIME=$(date +%s)
+LMC_LOG="$BUILD_DIR/livemedia-creator.log"
+
+progress_reporter() {
+    local start=$1
+    while true; do
+        sleep 30
+        local now=$(date +%s)
+        local elapsed=$(( now - start ))
+        local mins=$(( elapsed / 60 ))
+        local secs=$(( elapsed % 60 ))
+        echo -e "\e[1;36m[PROGRESS]\e[0m  ⏱  Build en cours depuis ${mins}m ${secs}s..."
+    done
+}
+
+# Démarrage du reporter en arrière-plan
+progress_reporter "$BUILD_START_TIME" &
+PROGRESS_PID=$!
+# S'assurer que le reporter est tué à la fin (même en cas d'erreur)
+trap "kill $PROGRESS_PID 2>/dev/null; wait $PROGRESS_PID 2>/dev/null" EXIT
+
+info "📦 Phase 1/3 : Installation du système (Anaconda + kickstart)..."
+info "📦 Phase 2/3 : Création du système de fichiers compressé (squashfs)..."
+info "📦 Phase 3/3 : Assemblage de l'image ISO..."
+info ""
+info "Les 3 phases sont gérées automatiquement par livemedia-creator."
+info "Un message de progression s'affichera toutes les 30 secondes."
+info "Log détaillé : $LMC_LOG"
+echo ""
+
 livemedia-creator \
     --ks "$KS_FINAL" \
     --no-virt \
@@ -235,9 +267,21 @@ livemedia-creator \
     --volid "$VOLID" \
     --iso-only \
     --iso-name "$ISO_NAME" \
-    --releasever 44
+    --releasever 44 \
+    --logfile "$LMC_LOG"
 
 BUILD_STATUS=$?
+
+# Arrêt du reporter de progression
+kill "$PROGRESS_PID" 2>/dev/null
+wait "$PROGRESS_PID" 2>/dev/null
+trap - EXIT
+
+# Calcul du temps total
+BUILD_END_TIME=$(date +%s)
+BUILD_ELAPSED=$(( BUILD_END_TIME - BUILD_START_TIME ))
+BUILD_MINS=$(( BUILD_ELAPSED / 60 ))
+BUILD_SECS=$(( BUILD_ELAPSED % 60 ))
 
 # Restauration de SELinux si nécessaire
 if [ "$SELINUX_WAS_ENFORCING" = true ]; then
@@ -253,23 +297,27 @@ echo ""
 if [ $BUILD_STATUS -eq 0 ] && [ -f "$RESULT_DIR/$ISO_NAME" ]; then
     ISO_SIZE=$(du -h "$RESULT_DIR/$ISO_NAME" | cut -f1)
     echo "==================================================="
-    ok "L'ISO a été généré avec succès !"
+    ok "🎉 L'ISO a été généré avec succès !"
     echo ""
     info "  Fichier : $RESULT_DIR/$ISO_NAME"
     info "  Taille  : $ISO_SIZE"
     info "  Volume  : $VOLID"
+    info "  Durée   : ${BUILD_MINS}m ${BUILD_SECS}s"
     echo ""
     info "Pour tester, lancez dans une VM :"
     info "  qemu-system-x86_64 -m 4096 -cdrom $RESULT_DIR/$ISO_NAME -boot d"
     echo "==================================================="
 else
     echo "==================================================="
-    error "La création de l'ISO a échoué (code: $BUILD_STATUS)."
+    error "❌ La création de l'ISO a échoué (code: $BUILD_STATUS)."
     echo ""
+    info "  Durée avant échec : ${BUILD_MINS}m ${BUILD_SECS}s"
+    info ""
     info "Consultez les logs :"
-    info "  - /var/tmp/arrera-build/ (kickstart final)"
-    info "  - /var/log/anaconda/    (logs Anaconda)"
-    info "  - Sortie ci-dessus      (erreurs livemedia-creator)"
+    info "  - $LMC_LOG                (log livemedia-creator)"
+    info "  - /var/tmp/arrera-build/  (kickstart final)"
+    info "  - /var/log/anaconda/      (logs Anaconda)"
+    info "  - Sortie ci-dessus        (erreurs livemedia-creator)"
     echo "==================================================="
     exit 1
 fi
