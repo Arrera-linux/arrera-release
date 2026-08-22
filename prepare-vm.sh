@@ -37,6 +37,8 @@ dnf install -y \
     genisoimage \
     isomd5sum \
     syslinux \
+    grub2-pc-modules \
+    grub2-tools-extra \
     git
 
 # 3. Vérification

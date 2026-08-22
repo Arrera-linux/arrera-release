@@ -11,6 +11,9 @@
 # Configuration générale
 # --------------------------------------------------------------------------
 
+# Mode non-interactif (évite qu'Anaconda attende un input après l'install)
+cmdline
+
 lang fr_FR.UTF-8
 keyboard fr
 timezone Europe/Paris --utc
