@@ -58,8 +58,12 @@ services --enabled=NetworkManager,gdm,firewalld
 kernel
 dracut-live
 grub2-efi-x64
+grub2-efi-x64-cdboot
+grub2-efi-x64-modules
 shim-x64
 grub2-pc-modules
+grub2-tools
+efibootmgr
 
 # === Bureau GNOME minimal ===
 gnome-shell
