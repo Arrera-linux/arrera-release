@@ -276,7 +276,8 @@ livemedia-creator \
     --iso-only \
     --iso-name "$ISO_NAME" \
     --releasever 44 \
-    --logfile "$LMC_LOG"
+    --logfile "$LMC_LOG" \
+    --extra-boot-args "rhgb quiet rd.live.image"
 
 BUILD_STATUS=$?
 

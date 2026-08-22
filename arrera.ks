@@ -134,6 +134,12 @@ google-noto-sans-fonts
 google-noto-sans-mono-fonts
 dejavu-sans-fonts
 
+# === Installateur (pour "Installer sur le disque dur") ===
+anaconda
+anaconda-install-env-deps
+anaconda-live
+liveinst
+
 %end
 
 # --------------------------------------------------------------------------
@@ -178,6 +184,50 @@ export ARRERA_ROOT="/opt/arrera"
 
 # Nettoyage
 rm -rf /opt/arrera
+
+# ================================================================
+# Configuration de la session Live (auto-login + installateur)
+# ================================================================
+
+# Auto-login GDM pour la session Live (pas de mot de passe demandé)
+mkdir -p /etc/gdm
+cat > /etc/gdm/custom.conf <<'GDM_EOF'
+[daemon]
+AutomaticLoginEnable=True
+AutomaticLogin=arrera
+
+[security]
+
+[xdmcp]
+
+[chooser]
+
+[debug]
+GDM_EOF
+
+# Raccourci "Installer Arrera Linux" sur le bureau
+mkdir -p /home/arrera/Bureau
+cat > /home/arrera/Bureau/install-arrera.desktop <<'DESKTOP_EOF'
+[Desktop Entry]
+Name=Installer Arrera Linux
+Name[en]=Install Arrera Linux
+Comment=Installer Arrera Linux sur le disque dur
+Exec=/usr/bin/liveinst
+Icon=anaconda
+Terminal=false
+Type=Application
+Categories=System;GTK;
+StartupNotify=true
+DESKTOP_EOF
+chmod +x /home/arrera/Bureau/install-arrera.desktop
+chown -R arrera:arrera /home/arrera/Bureau
+
+# Aussi dans /usr/share/applications pour le menu
+cp /home/arrera/Bureau/install-arrera.desktop /usr/share/applications/install-arrera.desktop
+
+# Marquer le .desktop comme fiable (GNOME 44+)
+mkdir -p /home/arrera/.local/share
+chown -R arrera:arrera /home/arrera/.local
 
 echo "=========================================="
 echo " FIN DE LA CONFIGURATION ARRERA LINUX    "
