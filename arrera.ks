@@ -11,8 +11,8 @@
 # Configuration générale
 # --------------------------------------------------------------------------
 
-# Mode non-interactif (évite qu'Anaconda attende un input après l'install)
-cmdline
+# Arrêt automatique après installation (évite qu'Anaconda reste bloqué)
+poweroff
 
 lang fr_FR.UTF-8
 keyboard fr
