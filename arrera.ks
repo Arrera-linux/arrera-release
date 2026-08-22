@@ -59,6 +59,7 @@ kernel
 dracut-live
 grub2-efi-x64
 shim-x64
+grub2-pc-modules
 
 # === Bureau GNOME minimal ===
 gnome-shell
