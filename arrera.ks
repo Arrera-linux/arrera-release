@@ -47,7 +47,9 @@ services --enabled=NetworkManager,gdm,firewalld
 
 %packages --ignoremissing
 
-@^workstation-product-environment
+# === Base système ===
+@core
+@hardware-support
 
 # Noyau et démarrage
 kernel
@@ -55,7 +57,37 @@ dracut-live
 grub2-efi-x64
 shim-x64
 
-# Outils système
+# === Bureau GNOME minimal ===
+gnome-shell
+gnome-session
+gnome-settings-daemon
+gnome-control-center
+mutter
+gdm
+gnome-keyring
+xdg-user-dirs
+xdg-desktop-portal-gnome
+dbus
+
+# === Applications demandées ===
+nautilus
+firefox
+gnome-tweaks
+gnome-extensions-app
+gnome-text-editor
+gnome-disk-utility
+loupe
+evince
+gnome-calendar
+gnome-clocks
+ptyxis
+
+# === Extensions GNOME ===
+gnome-shell-extension-appindicator
+gnome-shell-extension-forge
+gnome-shell-extension-gpaste
+
+# === Outils système ===
 sudo
 vim-enhanced
 nano
@@ -69,17 +101,12 @@ gzip
 bzip2
 htop
 fastfetch
+bash-completion
 
 # Python et Qt
 python3
 python3-pip
 qt5-qtbase
-
-# Extensions GNOME
-gnome-shell-extension-appindicator
-gnome-shell-extension-forge
-gnome-shell-extension-gpaste
-gnome-tweaks
 
 # Identité visuelle
 chafa
@@ -93,6 +120,11 @@ pipewire-pulseaudio
 wireplumber
 NetworkManager-wifi
 firewalld
+
+# Polices (évite un bureau sans texte lisible)
+google-noto-sans-fonts
+google-noto-sans-mono-fonts
+dejavu-sans-fonts
 
 %end
 
