@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ==============================================================================
-# Script de configuration : Environnement de développement Arrera Linux V2
+# Script de configuration : Environnement Arrera Linux V2 (Blue-dev 2026)
 # ==============================================================================
 # Ce script peut être exécuté :
 #   - Manuellement sur un système existant : sudo ./setup-dev-env.sh
@@ -15,8 +15,8 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo "=========================================="
-echo " Configuration de l'environnement de dev  "
-echo " Arrera Linux                             "
+echo " Configuration de l'environnement         "
+echo " Arrera Blue-dev 2026                     "
 echo "=========================================="
 
 # En mode kickstart, ARRERA_ROOT est défini par le %post.
@@ -24,8 +24,35 @@ echo "=========================================="
 REPO_DIR="${ARRERA_ROOT:-$(pwd)}"
 ASSET_DIR="$REPO_DIR/asset"
 
-# 1. Configuration de l'identité du système
-echo "[1/8] Mise à jour de /etc/os-release et /usr/lib/os-release..."
+# ------------------------------------------------------------------------------
+# 0. Mise à jour complète des paquets et nettoyage des anciens noyaux
+# (Doit être exécuté EN PREMIER pour ne pas écraser la personnalisation Arrera)
+# ------------------------------------------------------------------------------
+echo "[0/9] Mise à jour complète des paquets (dnf upgrade)..."
+dnf -y upgrade --refresh 2>/dev/null || true
+
+# Ne conserver UNIQUEMENT que le noyau le plus récent (supprimer l'ancien noyau d'origine en doublon)
+echo "      Nettoyage des anciens noyaux pour ne garder que le plus récent..."
+if rpm -q kernel-core &>/dev/null; then
+    KERNEL_COUNT=$(rpm -q kernel-core | wc -l)
+    if [ "$KERNEL_COUNT" -gt 1 ]; then
+        LATEST_KERNEL=$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort -V | tail -n 1)
+        OLD_KERNELS=$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort -V | head -n -1)
+        for old_k in $OLD_KERNELS; do
+            echo "      Suppression de l'ancien noyau : $old_k"
+            rpm -e --nodeps "kernel-core-$old_k" "kernel-modules-$old_k" "kernel-modules-core-$old_k" "kernel-$old_k" "kernel-modules-extra-$old_k" 2>/dev/null || true
+            rm -rf "/lib/modules/$old_k" "/boot/*$old_k*" 2>/dev/null || true
+            rm -f /boot/loader/entries/*"$old_k"*.conf 2>/dev/null || true
+        done
+        echo "      Noyau conservé : $LATEST_KERNEL"
+    fi
+fi
+dnf clean all 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# 1. Configuration de l'identité du système (os-release)
+# ------------------------------------------------------------------------------
+echo "[1/9] Mise à jour de /etc/os-release et /usr/lib/os-release..."
 mkdir -p /usr/lib
 cat <<'EOF' > /usr/lib/os-release
 NAME="Arrera"
@@ -60,11 +87,12 @@ cp /usr/lib/os-release /etc/os-release
 # Nom d'hôte par défaut
 echo "arrera-blue" > /etc/hostname
 
+# ------------------------------------------------------------------------------
 # 2. Création du fichier de release et des liens symboliques
-echo "[2/8] Création de /etc/arrera-release et des liens de compatibilité..."
+# ------------------------------------------------------------------------------
+echo "[2/9] Création de /etc/arrera-release et des liens de compatibilité..."
 echo "Arrera Blue-dev 2026" > /etc/arrera-release
 
-# On supprime les anciens fichiers s'ils existent et on crée les liens symboliques
 for release_file in fedora-release system-release redhat-release; do
     if [ -f "/etc/$release_file" ] || [ -L "/etc/$release_file" ]; then
         rm -f "/etc/$release_file"
@@ -72,8 +100,10 @@ for release_file in fedora-release system-release redhat-release; do
     ln -s /etc/arrera-release "/etc/$release_file"
 done
 
-# 3. Modification du gestionnaire de démarrage GRUB et des entrées BLS de kernel-install
-echo "[3/8] Configuration du menu de démarrage GRUB et des hooks de mise à jour noyau..."
+# ------------------------------------------------------------------------------
+# 3. Modification du gestionnaire de démarrage GRUB et des entrées BLS
+# ------------------------------------------------------------------------------
+echo "[3/9] Configuration du menu de démarrage GRUB et des hooks de mise à jour noyau..."
 if [ -f /etc/default/grub ]; then
     sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Arrera Blue-dev 2026"/' /etc/default/grub
 fi
@@ -95,7 +125,7 @@ exit 0
 KERNEL_INSTALL_EOF
 chmod +x /etc/kernel/install.d/99-arrera-title.install
 
-# Corriger immédiatement les entrées BLS existantes si présentes
+# Corriger immédiatement les entrées BLS existantes
 if [ -d /boot/loader/entries ]; then
     for conf in /boot/loader/entries/*.conf; do
         [ -f "$conf" ] || continue
@@ -104,10 +134,11 @@ if [ -d /boot/loader/entries ]; then
     done
 fi
 
-# 4. Installation des assets locaux et configuration Fastfetch
-echo "[4/8] Installation des assets visuels et configuration Fastfetch..."
+# ------------------------------------------------------------------------------
+# 4. Installation des assets visuels (Logos PNG, SVG, Fastfetch)
+# ------------------------------------------------------------------------------
+echo "[4/9] Installation des assets visuels et remplacement complet du branding Fedora..."
 
-# Installation du logo système et remplacement du branding Fedora / Anaconda / GNOME
 if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
     # 1. Copie dans /usr/share/pixmaps (utilisé par Anaconda, GDM, Paramètres GNOME / À Propos)
     mkdir -p /usr/share/pixmaps
@@ -118,7 +149,7 @@ if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
         fi
     done
 
-    # 2. Copie dans tous les répertoires d'icônes hicolor (16x16 -> 512x512 et scalable)
+    # 2. Copie dans tous les répertoires d'icônes hicolor (16x16 -> 512x512)
     for size in 16x16 22x22 24x24 32x32 48x48 64x64 96x96 128x128 256x256 512x512; do
         mkdir -p "/usr/share/icons/hicolor/$size/apps"
         for name in arrera-logo arrera-logo-text arrera-logo-text-dark system-logo-icon fedora-logo-icon fedora-logo fedora-logo-text fedora-logo-text-dark; do
@@ -126,7 +157,7 @@ if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
         done
     done
 
-    # 3. Répertoire scalable (CRITIQUE pour GNOME Control Center qui charge en priorité le SVG)
+    # 3. Répertoire scalable (CRITIQUE pour GNOME Control Center et Anaconda WebUI)
     mkdir -p /usr/share/icons/hicolor/scalable/apps
     if [ -f "$ASSET_DIR/arrera-logo.svg" ]; then
         for name in arrera-logo arrera-logo-text arrera-logo-text-dark system-logo-icon fedora-logo-icon fedora-logo fedora-logo-text fedora-logo-text-dark; do
@@ -134,7 +165,7 @@ if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
         done
     fi
 
-    # 4. Remplacer tout fichier SVG ou PNG existant contenant 'fedora' et 'logo' dans /usr/share/icons
+    # 4. Remplacer tout fichier SVG ou PNG Fedora existant dans /usr/share/icons
     if [ -f "$ASSET_DIR/arrera-logo.svg" ]; then
         find /usr/share/icons -type f \( -iname "*fedora*logo*.svg" -o -iname "*fedora*text*.svg" \) -exec cp "$ASSET_DIR/arrera-logo.svg" {} \; 2>/dev/null || true
     fi
@@ -165,8 +196,10 @@ if [ -d "$REPO_DIR/configs" ]; then
     fi
 fi
 
+# ------------------------------------------------------------------------------
 # 5. Configuration de l'écran de démarrage (Plymouth - Style macOS)
-echo "[5/8] Configuration du thème Plymouth (Style macOS)..."
+# ------------------------------------------------------------------------------
+echo "[5/9] Configuration du thème Plymouth (Style macOS)..."
 
 if [ -d "$REPO_DIR/configs/plymouth" ] && \
    [ -f "$REPO_DIR/configs/plymouth/arrera.plymouth" ] && \
@@ -175,35 +208,34 @@ if [ -d "$REPO_DIR/configs/plymouth" ] && \
     mkdir -p /usr/share/plymouth/themes/arrera/
     cp "$REPO_DIR/configs/plymouth/"* /usr/share/plymouth/themes/arrera/ 2>/dev/null || true
 
-    # Installation du logo Plymouth local
     if [ -f "$ASSET_DIR/logo.png" ]; then
         cp "$ASSET_DIR/logo.png" /usr/share/plymouth/themes/arrera/
     fi
 
-    # Application de Plymouth et reconstruction de l'initramfs
     plymouth-set-default-theme -R arrera 2>/dev/null || true
 else
     echo "  [SKIP] Fichiers Plymouth non trouvés dans $REPO_DIR/configs/plymouth/"
 fi
 
+# ------------------------------------------------------------------------------
 # 6. Configuration de l'écran de connexion (GDM)
-echo "[6/8] Configuration de GDM..."
+# ------------------------------------------------------------------------------
+echo "[6/9] Configuration de GDM..."
 mkdir -p /etc/dconf/db/gdm.d/
 
-# Règle dconf pour GDM
 if [ -f "$REPO_DIR/configs/99-arrera-login" ]; then
     cp "$REPO_DIR/configs/99-arrera-login" /etc/dconf/db/gdm.d/
 fi
 
-# Logo GDM depuis les assets locaux
 if [ -f "$ASSET_DIR/arrera_gdm_logo_dark.png" ]; then
     cp "$ASSET_DIR/arrera_gdm_logo_dark.png" /usr/share/pixmaps/
 fi
 
-# 7. Configuration des paramètres GNOME (Claviers, Extensions, dconf)
-echo "[7/8] Configuration des paramètres GNOME (Claviers + Extensions activées)..."
+# ------------------------------------------------------------------------------
+# 7. Configuration des paramètres GNOME (Claviers, Boutons, Extensions, dconf)
+# ------------------------------------------------------------------------------
+echo "[7/9] Configuration des paramètres GNOME (Claviers + Boutons + Extensions)..."
 
-# Configuration du profil dconf
 mkdir -p /etc/dconf/profile
 cat > /etc/dconf/profile/user <<'PROFILE_EOF'
 user-db:user
@@ -246,7 +278,9 @@ DCONF_GPASTE_EOF
 
 dconf update 2>/dev/null || true
 
-# 8. Règles Polkit pour la session Live (Pas de mot de passe demandé pour l'installateur Anaconda)
+# ------------------------------------------------------------------------------
+# 8. Règles Polkit pour la session Live (Pas de mot de passe demandé)
+# ------------------------------------------------------------------------------
 echo "[8/9] Configuration des autorisations Polkit pour la session Live..."
 mkdir -p /etc/polkit-1/rules.d/
 
@@ -274,7 +308,9 @@ polkit.addRule(function(action, subject) {
 });
 POLKIT_ANACONDA_EOF
 
-# 9. Script et service de nettoyage post-installation (s'exécute UNIQUEMENT sur le système installé, pas le Live)
+# ------------------------------------------------------------------------------
+# 9. Script et service de nettoyage post-installation
+# ------------------------------------------------------------------------------
 echo "[9/9] Mise en place du service de nettoyage post-installation..."
 
 mkdir -p /usr/libexec
@@ -297,7 +333,6 @@ fi
 # 2. Supprimer l'utilisateur temporaire "arrera" de la session Live
 # et ne conserver que le compte utilisateur créé par l'utilisateur lors de l'installation
 if id "arrera" &>/dev/null; then
-    # Vérifie s'il existe un autre utilisateur (UID >= 1000)
     OTHER_USER=$(awk -F: '$3 >= 1000 && $1 != "arrera" && $1 != "nobody" {print $1}' /etc/passwd | head -n 1)
     if [ -n "$OTHER_USER" ]; then
         pkill -9 -u arrera 2>/dev/null || true
@@ -356,11 +391,6 @@ WantedBy=multi-user.target graphical.target
 SERVICE_EOF
 
 systemctl enable arrera-post-install-cleanup.service 2>/dev/null || true
-
-# Mise à jour complète de tous les paquets du système avant finalisation
-echo "Mise à jour complète des paquets (dnf upgrade)..."
-dnf -y upgrade --refresh 2>/dev/null || true
-dnf clean all 2>/dev/null || true
 
 # Régénération finale de GRUB (si présent)
 if [ -f /etc/default/grub ]; then
