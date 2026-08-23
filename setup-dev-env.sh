@@ -255,10 +255,9 @@ PROFILE_EOF
 
 mkdir -p /etc/dconf/db/local.d/
 
-# Activation de tous les claviers avec raccourci et affichage de tous les layouts
+# Affichage de tous les layouts de claviers internationaux sans forcer de disposition spécifique
 cat > /etc/dconf/db/local.d/00-input-sources <<'DCONF_INPUT_EOF'
 [org/gnome/desktop/input-sources]
-sources=[('xkb', 'fr'), ('xkb', 'us')]
 show-all-sources=true
 DCONF_INPUT_EOF
 

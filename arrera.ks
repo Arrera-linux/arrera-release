@@ -15,7 +15,7 @@
 poweroff
 
 lang fr_FR.UTF-8
-keyboard --vckeymap=fr --xlayouts='fr','us'
+keyboard --vckeymap=fr --xlayouts='fr'
 timezone Europe/Paris --utc
 
 network --bootproto=dhcp --device=link --activate
