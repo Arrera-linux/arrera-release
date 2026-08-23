@@ -32,7 +32,7 @@ selinux --permissive
 # --------------------------------------------------------------------------
 
 url --metalink="https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch"
-repo --name="updates" --metalink="https://mirrors.fedoraproject.org/metalink?repo=updates-released-f$releasever&arch=$basearch" --install
+repo --name="updates" --metalink="https://mirrors.fedoraproject.org/metalink?repo=updates-released-f$releasever&arch=$basearch" --install --cost=50
 
 # Partitionnement (taille fixe requise par livemedia-creator --no-virt)
 zerombr

@@ -25,34 +25,15 @@ REPO_DIR="${ARRERA_ROOT:-$(pwd)}"
 ASSET_DIR="$REPO_DIR/asset"
 
 # ------------------------------------------------------------------------------
-# 0. Mise à jour complète des paquets et nettoyage des anciens noyaux
-# (Doit être exécuté EN PREMIER pour ne pas écraser la personnalisation Arrera)
+# 0. Nettoyage des caches DNF
 # ------------------------------------------------------------------------------
-echo "[0/10] Mise à jour complète des paquets (dnf upgrade)..."
-dnf -y upgrade --refresh 2>/dev/null || true
-
-# Ne conserver UNIQUEMENT que le noyau le plus récent (supprimer l'ancien noyau d'origine en doublon)
-echo "       Nettoyage des anciens noyaux pour ne garder que le plus récent..."
-if rpm -q kernel-core &>/dev/null; then
-    KERNEL_COUNT=$(rpm -q kernel-core | wc -l)
-    if [ "$KERNEL_COUNT" -gt 1 ]; then
-        LATEST_KERNEL=$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort -V | tail -n 1)
-        OLD_KERNELS=$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort -V | head -n -1)
-        for old_k in $OLD_KERNELS; do
-            echo "       Suppression de l'ancien noyau : $old_k"
-            rpm -e --nodeps "kernel-core-$old_k" "kernel-modules-$old_k" "kernel-modules-core-$old_k" "kernel-$old_k" "kernel-modules-extra-$old_k" 2>/dev/null || true
-            rm -rf "/lib/modules/$old_k" "/boot/*$old_k*" 2>/dev/null || true
-            rm -f /boot/loader/entries/*"$old_k"*.conf 2>/dev/null || true
-        done
-        echo "       Noyau conservé : $LATEST_KERNEL"
-    fi
-fi
+echo "[0/9] Nettoyage des caches..."
 dnf clean all 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
 # 1. Configuration de l'identité du système (os-release)
 # ------------------------------------------------------------------------------
-echo "[1/10] Mise à jour de /etc/os-release et /usr/lib/os-release..."
+echo "[1/9] Mise à jour de /etc/os-release et /usr/lib/os-release..."
 mkdir -p /usr/lib
 cat <<'EOF' > /usr/lib/os-release
 NAME="Arrera"
