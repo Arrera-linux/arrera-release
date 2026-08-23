@@ -31,8 +31,8 @@ CONFIG_DIR="$SCRIPT_DIR/configs"
 BUILD_DIR="/var/tmp/arrera-build"
 RESULT_DIR="/var/tmp/arrera-iso"
 KS_FINAL="$BUILD_DIR/arrera-final.ks"
-ISO_NAME="Arrera-Linux-Blue-Dev.iso"
-VOLID="Arrera_Blue_Dev"
+ISO_NAME="Arrera-Blue-dev-2026.iso"
+VOLID="Arrera_Blue_dev_2026"
 
 # --------------------------------------------------------------------------
 # Fonctions utilitaires
@@ -144,14 +144,14 @@ ASSETS_BLOCK+=$'\n'
 ASSETS_BLOCK+=$(encode_asset "$CONFIG_DIR/99-arrera-login" "/opt/arrera/configs/99-arrera-login")
 ASSETS_BLOCK+=$'\n'
 
-# Plymouth configs
-if [ -f "$CONFIG_DIR/plymouth/arrera.plymouth" ]; then
-    ASSETS_BLOCK+=$(encode_asset "$CONFIG_DIR/plymouth/arrera.plymouth" "/opt/arrera/configs/plymouth/arrera.plymouth")
-    ASSETS_BLOCK+=$'\n'
-fi
-if [ -f "$CONFIG_DIR/plymouth/arrera.script" ]; then
-    ASSETS_BLOCK+=$(encode_asset "$CONFIG_DIR/plymouth/arrera.script" "/opt/arrera/configs/plymouth/arrera.script")
-    ASSETS_BLOCK+=$'\n'
+# Plymouth configs et images
+if [ -d "$CONFIG_DIR/plymouth" ]; then
+    for p_file in "$CONFIG_DIR/plymouth"/*; do
+        if [ -f "$p_file" ]; then
+            ASSETS_BLOCK+=$(encode_asset "$p_file" "/opt/arrera/configs/plymouth/$(basename "$p_file")")
+            ASSETS_BLOCK+=$'\n'
+        fi
+    done
 fi
 
 ok "Assets encodés."
@@ -270,7 +270,7 @@ livemedia-creator \
     --ks "$KS_FINAL" \
     --no-virt \
     --resultdir "$RESULT_DIR" \
-    --project "Arrera Linux" \
+    --project "Arrera Blue-dev 2026" \
     --make-iso \
     --volid "$VOLID" \
     --iso-only \

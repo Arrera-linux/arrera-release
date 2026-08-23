@@ -1,13 +1,13 @@
 # ==============================================================================
-# Arrera Linux - Plymouth Boot Script
+# Arrera Linux - Plymouth Boot Script (Style macOS)
 # ==============================================================================
-# Affiche le logo centré avec une animation de chargement (throbber)
+# Affiche le logo centré avec une barre de progression minimaliste et élégante.
 
 # --------------------------------------------------------------------------
-# Arrière-plan
+# Arrière-plan sombre
 # --------------------------------------------------------------------------
-Window.SetBackgroundTopColor(0.12, 0.12, 0.14);
-Window.SetBackgroundBottomColor(0.06, 0.06, 0.08);
+Window.SetBackgroundTopColor(0.08, 0.08, 0.10);
+Window.SetBackgroundBottomColor(0.04, 0.04, 0.06);
 
 # --------------------------------------------------------------------------
 # Logo centré
@@ -15,35 +15,62 @@ Window.SetBackgroundBottomColor(0.06, 0.06, 0.08);
 logo_image = Image("logo.png");
 logo_sprite = Sprite(logo_image);
 logo_sprite.SetX(Window.GetWidth() / 2 - logo_image.GetWidth() / 2);
-logo_sprite.SetY(Window.GetHeight() / 2 - logo_image.GetHeight() / 2 - 40);
+logo_sprite.SetY(Window.GetHeight() / 2 - logo_image.GetHeight() / 2 - 30);
 
 # --------------------------------------------------------------------------
-# Animation de chargement (throbber) — utilise les images spinner de Fedora
+# Barre de progression style macOS
 # --------------------------------------------------------------------------
-throbber_count = 0;
-for (i = 0; Image("throbber-" + i + ".png"); i++) {
-    throbber_images[i] = Image("throbber-" + i + ".png");
-    throbber_count++;
+progress_box.image = Image("progress_bg.png");
+progress_box.sprite = Sprite(progress_box.image);
+
+bar_w = progress_box.image.GetWidth();
+bar_h = progress_box.image.GetHeight();
+bar_x = Window.GetWidth() / 2 - bar_w / 2;
+bar_y = Window.GetHeight() / 2 + logo_image.GetHeight() / 2 + 25;
+
+progress_box.sprite.SetX(bar_x);
+progress_box.sprite.SetY(bar_y);
+
+progress_bar.original_image = Image("progress_bar.png");
+progress_bar.sprite = Sprite();
+progress_bar.sprite.SetX(bar_x);
+progress_bar.sprite.SetY(bar_y);
+
+curr_progress = 0.0;
+target_progress = 0.05;
+
+fun progress_callback(duration, progress) {
+    if (progress > target_progress) {
+        target_progress = progress;
+    }
 }
-
-throbber_sprite = Sprite();
-throbber_sprite.SetX(Window.GetWidth() / 2 - throbber_images[0].GetWidth() / 2);
-throbber_sprite.SetY(Window.GetHeight() / 2 + logo_image.GetHeight() / 2 + 20);
-
-frame = 0;
 
 fun refresh_callback() {
-    throbber_sprite.SetImage(throbber_images[Math.Int(frame) % throbber_count]);
-    frame += 0.3;
+    # Interpolation fluide vers la progression cible
+    if (curr_progress < target_progress) {
+        curr_progress += (target_progress - curr_progress) * 0.1 + 0.002;
+        if (curr_progress > 1.0) curr_progress = 1.0;
+    } else if (curr_progress < 0.95) {
+        # Légère progression continue par défaut si pas de nouvelles données
+        curr_progress += 0.0005;
+    }
+
+    fill_w = Math.Int(bar_w * curr_progress);
+    if (fill_w < 2) fill_w = 2;
+    if (fill_w > bar_w) fill_w = bar_w;
+
+    progress_bar.image = progress_bar.original_image.Crop(0, 0, fill_w, bar_h);
+    progress_bar.sprite.SetImage(progress_bar.image);
 }
 
+Plymouth.SetBootProgressFunction(progress_callback);
 Plymouth.SetRefreshFunction(refresh_callback);
 
 # --------------------------------------------------------------------------
-# Messages (mot de passe disque chiffré, etc.)
+# Messages système (saisie mot de passe luks, fsck, etc.)
 # --------------------------------------------------------------------------
 message_sprite = Sprite();
-message_sprite.SetPosition(Window.GetWidth() / 2, Window.GetHeight() - 50, 10000);
+message_sprite.SetPosition(Window.GetWidth() / 2, Window.GetHeight() - 60, 10000);
 
 fun message_callback(text) {
     msg_image = Image.Text(text, 0.8, 0.8, 0.8);
