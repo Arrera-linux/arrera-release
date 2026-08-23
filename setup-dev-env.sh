@@ -28,23 +28,23 @@ ASSET_DIR="$REPO_DIR/asset"
 # 0. Mise à jour complète des paquets et nettoyage des anciens noyaux
 # (Doit être exécuté EN PREMIER pour ne pas écraser la personnalisation Arrera)
 # ------------------------------------------------------------------------------
-echo "[0/9] Mise à jour complète des paquets (dnf upgrade)..."
+echo "[0/10] Mise à jour complète des paquets (dnf upgrade)..."
 dnf -y upgrade --refresh 2>/dev/null || true
 
 # Ne conserver UNIQUEMENT que le noyau le plus récent (supprimer l'ancien noyau d'origine en doublon)
-echo "      Nettoyage des anciens noyaux pour ne garder que le plus récent..."
+echo "       Nettoyage des anciens noyaux pour ne garder que le plus récent..."
 if rpm -q kernel-core &>/dev/null; then
     KERNEL_COUNT=$(rpm -q kernel-core | wc -l)
     if [ "$KERNEL_COUNT" -gt 1 ]; then
         LATEST_KERNEL=$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort -V | tail -n 1)
         OLD_KERNELS=$(rpm -q kernel-core --qf '%{VERSION}-%{RELEASE}.%{ARCH}\n' | sort -V | head -n -1)
         for old_k in $OLD_KERNELS; do
-            echo "      Suppression de l'ancien noyau : $old_k"
+            echo "       Suppression de l'ancien noyau : $old_k"
             rpm -e --nodeps "kernel-core-$old_k" "kernel-modules-$old_k" "kernel-modules-core-$old_k" "kernel-$old_k" "kernel-modules-extra-$old_k" 2>/dev/null || true
             rm -rf "/lib/modules/$old_k" "/boot/*$old_k*" 2>/dev/null || true
             rm -f /boot/loader/entries/*"$old_k"*.conf 2>/dev/null || true
         done
-        echo "      Noyau conservé : $LATEST_KERNEL"
+        echo "       Noyau conservé : $LATEST_KERNEL"
     fi
 fi
 dnf clean all 2>/dev/null || true
@@ -52,7 +52,7 @@ dnf clean all 2>/dev/null || true
 # ------------------------------------------------------------------------------
 # 1. Configuration de l'identité du système (os-release)
 # ------------------------------------------------------------------------------
-echo "[1/9] Mise à jour de /etc/os-release et /usr/lib/os-release..."
+echo "[1/10] Mise à jour de /etc/os-release et /usr/lib/os-release..."
 mkdir -p /usr/lib
 cat <<'EOF' > /usr/lib/os-release
 NAME="Arrera"
@@ -90,7 +90,7 @@ echo "arrera-blue" > /etc/hostname
 # ------------------------------------------------------------------------------
 # 2. Création du fichier de release et des liens symboliques
 # ------------------------------------------------------------------------------
-echo "[2/9] Création de /etc/arrera-release et des liens de compatibilité..."
+echo "[2/10] Création de /etc/arrera-release et des liens de compatibilité..."
 echo "Arrera Blue-dev 2026" > /etc/arrera-release
 
 for release_file in fedora-release system-release redhat-release; do
@@ -103,7 +103,7 @@ done
 # ------------------------------------------------------------------------------
 # 3. Modification du gestionnaire de démarrage GRUB et des entrées BLS
 # ------------------------------------------------------------------------------
-echo "[3/9] Configuration du menu de démarrage GRUB et des hooks de mise à jour noyau..."
+echo "[3/10] Configuration du menu de démarrage GRUB et des hooks de mise à jour noyau..."
 if [ -f /etc/default/grub ]; then
     sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Arrera Blue-dev 2026"/' /etc/default/grub
 fi
@@ -137,7 +137,7 @@ fi
 # ------------------------------------------------------------------------------
 # 4. Installation des assets visuels (Logos PNG, SVG, Fastfetch)
 # ------------------------------------------------------------------------------
-echo "[4/9] Installation des assets visuels et remplacement complet du branding Fedora..."
+echo "[4/10] Installation des assets visuels et remplacement complet du branding Fedora..."
 
 if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
     # 1. Copie dans /usr/share/pixmaps (utilisé par Anaconda, GDM, Paramètres GNOME / À Propos)
@@ -185,6 +185,17 @@ if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
     done
 fi
 
+# Sauvegarde permanente des fichiers maîtres de marque Arrera (pour restauration automatique en cas d'update)
+mkdir -p /usr/share/arrera-branding
+cp /usr/lib/os-release /usr/share/arrera-branding/os-release 2>/dev/null || true
+cp /etc/arrera-release /usr/share/arrera-branding/arrera-release 2>/dev/null || true
+if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
+    cp "$ASSET_DIR/arrera-logo.png" /usr/share/arrera-branding/ 2>/dev/null || true
+fi
+if [ -f "$ASSET_DIR/arrera-logo.svg" ]; then
+    cp "$ASSET_DIR/arrera-logo.svg" /usr/share/arrera-branding/ 2>/dev/null || true
+fi
+
 # Installation de Fastfetch (JSON et logo ASCII)
 if [ -d "$REPO_DIR/configs" ]; then
     mkdir -p /etc/fastfetch
@@ -199,7 +210,7 @@ fi
 # ------------------------------------------------------------------------------
 # 5. Configuration de l'écran de démarrage (Plymouth - Style macOS)
 # ------------------------------------------------------------------------------
-echo "[5/9] Configuration du thème Plymouth (Style macOS)..."
+echo "[5/10] Configuration du thème Plymouth (Style macOS)..."
 
 if [ -d "$REPO_DIR/configs/plymouth" ] && \
    [ -f "$REPO_DIR/configs/plymouth/arrera.plymouth" ] && \
@@ -220,7 +231,7 @@ fi
 # ------------------------------------------------------------------------------
 # 6. Configuration de l'écran de connexion (GDM)
 # ------------------------------------------------------------------------------
-echo "[6/9] Configuration de GDM..."
+echo "[6/10] Configuration de GDM..."
 mkdir -p /etc/dconf/db/gdm.d/
 
 if [ -f "$REPO_DIR/configs/99-arrera-login" ]; then
@@ -234,7 +245,7 @@ fi
 # ------------------------------------------------------------------------------
 # 7. Configuration des paramètres GNOME (Claviers, Boutons, Extensions, dconf)
 # ------------------------------------------------------------------------------
-echo "[7/9] Configuration des paramètres GNOME (Claviers + Boutons + Extensions)..."
+echo "[7/10] Configuration des paramètres GNOME (Claviers + Boutons + Extensions)..."
 
 mkdir -p /etc/dconf/profile
 cat > /etc/dconf/profile/user <<'PROFILE_EOF'
@@ -281,7 +292,7 @@ dconf update 2>/dev/null || true
 # ------------------------------------------------------------------------------
 # 8. Règles Polkit pour la session Live (Pas de mot de passe demandé)
 # ------------------------------------------------------------------------------
-echo "[8/9] Configuration des autorisations Polkit pour la session Live..."
+echo "[8/10] Configuration des autorisations Polkit pour la session Live..."
 mkdir -p /etc/polkit-1/rules.d/
 
 cat > /etc/polkit-1/rules.d/49-liveuser.rules <<'POLKIT_LIVE_EOF'
@@ -309,9 +320,66 @@ polkit.addRule(function(action, subject) {
 POLKIT_ANACONDA_EOF
 
 # ------------------------------------------------------------------------------
-# 9. Script et service de nettoyage post-installation
+# 9. Protection permanente de la marque Arrera (résiste à tous les dnf update futurs)
 # ------------------------------------------------------------------------------
-echo "[9/9] Mise en place du service de nettoyage post-installation..."
+echo "[9/10] Mise en place de la protection permanente de la marque Arrera..."
+
+# 1. Empêcher DNF de réinstaller les paquets de marque Fedora qui écraseraient les logos
+if [ -f /etc/dnf/dnf.conf ]; then
+    if ! grep -q "excludepkgs=" /etc/dnf/dnf.conf; then
+        echo "excludepkgs=fedora-release-identity-basic,fedora-logos" >> /etc/dnf/dnf.conf
+    fi
+fi
+
+# 2. Service systemd permanent : restaure os-release et logos s'ils sont modifiés
+cat > /usr/libexec/arrera-branding-guard.sh <<'GUARD_EOF'
+#!/bin/bash
+# Arrera Branding Guard : Restaure automatiquement l'identité Arrera après toute mise à jour
+if [ -f /usr/share/arrera-branding/os-release ]; then
+    if ! grep -q 'PRETTY_NAME="Arrera Blue-dev 2026"' /usr/lib/os-release 2>/dev/null; then
+        cp -f /usr/share/arrera-branding/os-release /usr/lib/os-release
+        cp -f /usr/share/arrera-branding/os-release /etc/os-release
+    fi
+fi
+if [ -f /usr/share/arrera-branding/arrera-release ]; then
+    cp -f /usr/share/arrera-branding/arrera-release /etc/arrera-release
+    for f in fedora-release system-release redhat-release; do
+        ln -sf /etc/arrera-release "/etc/$f" 2>/dev/null || true
+    done
+fi
+if [ -d /boot/loader/entries ]; then
+    for conf in /boot/loader/entries/*.conf; do
+        [ -f "$conf" ] || continue
+        sed -i 's/^title Fedora Linux/title Arrera Blue-dev 2026/g' "$conf"
+        sed -i 's/^title Fedora/title Arrera Blue-dev 2026/g' "$conf"
+    done
+fi
+exit 0
+GUARD_EOF
+chmod +x /usr/libexec/arrera-branding-guard.sh
+
+cat > /etc/systemd/system/arrera-branding-guard.service <<'GUARD_SERVICE_EOF'
+[Unit]
+Description=Arrera Linux Branding Guard
+DefaultDependencies=no
+After=local-fs.target
+Before=gdm.service display-manager.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/libexec/arrera-branding-guard.sh
+
+[Install]
+WantedBy=multi-user.target graphical.target
+GUARD_SERVICE_EOF
+
+systemctl enable arrera-branding-guard.service 2>/dev/null || true
+
+# ------------------------------------------------------------------------------
+# 10. Script et service de nettoyage post-installation
+# ------------------------------------------------------------------------------
+echo "[10/10] Mise en place du service de nettoyage post-installation..."
 
 mkdir -p /usr/libexec
 cat > /usr/libexec/arrera-post-install-cleanup.sh <<'CLEANUP_SCRIPT_EOF'
@@ -371,7 +439,6 @@ CLEANUP_SCRIPT_EOF
 
 chmod +x /usr/libexec/arrera-post-install-cleanup.sh
 
-# Création du service systemd one-shot
 cat > /etc/systemd/system/arrera-post-install-cleanup.service <<'SERVICE_EOF'
 [Unit]
 Description=Arrera Linux Post-Install Cleanup
