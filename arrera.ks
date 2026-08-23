@@ -174,16 +174,11 @@ mkdir -p /opt/arrera/configs/plymouth
 __ASSETS_BASE64__
 # --- FIN : Assets encodés en base64 ---
 
-# Le contenu du script de setup est injecté ci-dessous par build_iso.sh
-cat > /opt/arrera/setup-dev-env.sh <<'SETUP_SCRIPT_EOF'
-__SETUP_DEV_ENV__
-SETUP_SCRIPT_EOF
-
-chmod +x /opt/arrera/setup-dev-env.sh
-
-# Exécution du script de configuration avec le bon répertoire racine
+# Le contenu du script de setup est injecté directement ci-dessous par build_iso.sh
+# IMPORTANT : on n'utilise PAS de heredoc (<<'EOF') car pykickstart/Anaconda le corrompt.
+# Le contenu de setup-dev-env.sh est exécuté directement comme commandes %post.
 export ARRERA_ROOT="/opt/arrera"
-/opt/arrera/setup-dev-env.sh
+__SETUP_DEV_ENV__
 
 # Nettoyage
 rm -rf /opt/arrera
