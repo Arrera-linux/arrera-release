@@ -198,13 +198,12 @@ fi
 ok "Vérification des placeholders OK — tous remplacés."
 
 # --------------------------------------------------------------------------
-# 5. Nettoyage de l'ancien résultat
+# 5. Nettoyage de l'ancien résultat et des dossiers temporaires
 # --------------------------------------------------------------------------
 
-if [ -d "$RESULT_DIR" ]; then
-    info "Nettoyage du dossier de compilation précédent..."
-    rm -rf "$RESULT_DIR"
-fi
+info "Nettoyage des fichiers temporaires des builds précédents dans /var/tmp..."
+rm -rf /var/tmp/lmc-work-* /var/tmp/lorax.imgutils.* /var/tmp/lmc-disk-* /var/tmp/lmc-* "$RESULT_DIR" 2>/dev/null || true
+dnf clean all 2>/dev/null || true
 
 # --------------------------------------------------------------------------
 # 6. Lancement de livemedia-creator
