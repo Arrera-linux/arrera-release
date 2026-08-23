@@ -114,7 +114,7 @@ encode_asset() {
     dest_dir=$(dirname "$dest_path")
 
     if [ ! -f "$src_file" ]; then
-        warn "Asset introuvable, ignoré : $src_file"
+        warn "Asset introuvable, ignoré : $src_file" >&2
         return
     fi
 
@@ -122,7 +122,7 @@ encode_asset() {
     b64=$(base64 -w0 "$src_file")
     echo "mkdir -p $dest_dir"
     echo "echo '$b64' | base64 -d > $dest_path"
-    info "  ✓ $(basename "$src_file") → $dest_path"
+    info "  ✓ $(basename "$src_file") → $dest_path" >&2
 }
 
 # Générer toutes les commandes de décodage des assets

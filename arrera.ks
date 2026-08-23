@@ -163,6 +163,9 @@ systemctl enable NetworkManager
 systemctl enable gdm
 systemctl enable firewalld
 
+# Forcer le démarrage en mode graphique (sinon GDM ne se lance pas)
+systemctl set-default graphical.target
+
 # Création du dossier Arrera pour les assets
 mkdir -p /opt/arrera/asset
 mkdir -p /opt/arrera/configs/plymouth
