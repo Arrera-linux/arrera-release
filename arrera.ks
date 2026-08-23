@@ -127,7 +127,7 @@ tar
 unzip
 gzip
 bzip2
-htop
+btop
 fastfetch
 bash-completion
 

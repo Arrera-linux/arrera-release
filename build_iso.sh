@@ -131,6 +131,8 @@ ASSETS_BLOCK=""
 # Assets visuels (images)
 ASSETS_BLOCK+=$(encode_asset "$ASSET_DIR/arrera-logo.png" "/opt/arrera/asset/arrera-logo.png")
 ASSETS_BLOCK+=$'\n'
+ASSETS_BLOCK+=$(encode_asset "$ASSET_DIR/arrera-logo.svg" "/opt/arrera/asset/arrera-logo.svg")
+ASSETS_BLOCK+=$'\n'
 ASSETS_BLOCK+=$(encode_asset "$ASSET_DIR/arrera_gdm_logo_dark.png" "/opt/arrera/asset/arrera_gdm_logo_dark.png")
 ASSETS_BLOCK+=$'\n'
 ASSETS_BLOCK+=$(encode_asset "$ASSET_DIR/logo.png" "/opt/arrera/asset/logo.png")

@@ -109,42 +109,49 @@ echo "[4/8] Installation des assets visuels et configuration Fastfetch..."
 
 # Installation du logo système et remplacement du branding Fedora / Anaconda / GNOME
 if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
-    # Copie dans /usr/share/pixmaps (utilisé par Anaconda, GDM, Paramètres GNOME / À Propos)
+    # 1. Copie dans /usr/share/pixmaps (utilisé par Anaconda, GDM, Paramètres GNOME / À Propos)
     mkdir -p /usr/share/pixmaps
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/pixmaps/arrera-logo.png
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/pixmaps/arrera-logo-text.png
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/pixmaps/arrera-logo-text-dark.png
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/pixmaps/system-logo-icon.png
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/pixmaps/fedora-logo-icon.png
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/pixmaps/fedora-logo.png
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/pixmaps/fedora_logo.png
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/pixmaps/fedora-logo-text.png
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/pixmaps/fedora-logo-text-dark.png
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/pixmaps/anaconda_header.png
-
-    # Copie dans tous les répertoires d'icônes hicolor (16x16 -> 512x512 et scalable)
-    for size in 16x16 22x22 24x24 32x32 48x48 64x64 96x96 128x128 256x256 512x512 scalable; do
-        mkdir -p "/usr/share/icons/hicolor/$size/apps"
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/arrera-logo.png" 2>/dev/null || true
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/arrera-logo-text.png" 2>/dev/null || true
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/arrera-logo-text-dark.png" 2>/dev/null || true
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/system-logo-icon.png" 2>/dev/null || true
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/fedora-logo-icon.png" 2>/dev/null || true
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/fedora-logo.png" 2>/dev/null || true
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/fedora-logo-text.png" 2>/dev/null || true
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/fedora-logo-text-dark.png" 2>/dev/null || true
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/fedora-logo-icon.svg" 2>/dev/null || true
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/fedora-logo-text.svg" 2>/dev/null || true
+    for name in arrera-logo arrera-logo-text arrera-logo-text-dark system-logo-icon fedora-logo-icon fedora-logo fedora_logo fedora-logo-text fedora-logo-text-dark anaconda_header; do
+        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/pixmaps/${name}.png" 2>/dev/null || true
+        if [ -f "$ASSET_DIR/arrera-logo.svg" ]; then
+            cp "$ASSET_DIR/arrera-logo.svg" "/usr/share/pixmaps/${name}.svg" 2>/dev/null || true
+        fi
     done
 
-    # Dossiers spécifiques de branding Anaconda
+    # 2. Copie dans tous les répertoires d'icônes hicolor (16x16 -> 512x512 et scalable)
+    for size in 16x16 22x22 24x24 32x32 48x48 64x64 96x96 128x128 256x256 512x512; do
+        mkdir -p "/usr/share/icons/hicolor/$size/apps"
+        for name in arrera-logo arrera-logo-text arrera-logo-text-dark system-logo-icon fedora-logo-icon fedora-logo fedora-logo-text fedora-logo-text-dark; do
+            cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/${name}.png" 2>/dev/null || true
+        done
+    done
+
+    # 3. Répertoire scalable (CRITIQUE pour GNOME Control Center qui charge en priorité le SVG)
+    mkdir -p /usr/share/icons/hicolor/scalable/apps
+    if [ -f "$ASSET_DIR/arrera-logo.svg" ]; then
+        for name in arrera-logo arrera-logo-text arrera-logo-text-dark system-logo-icon fedora-logo-icon fedora-logo fedora-logo-text fedora-logo-text-dark; do
+            cp "$ASSET_DIR/arrera-logo.svg" "/usr/share/icons/hicolor/scalable/apps/${name}.svg" 2>/dev/null || true
+        done
+    fi
+
+    # 4. Remplacer tout fichier SVG ou PNG existant contenant 'fedora' et 'logo' dans /usr/share/icons
+    if [ -f "$ASSET_DIR/arrera-logo.svg" ]; then
+        find /usr/share/icons -type f \( -iname "*fedora*logo*.svg" -o -iname "*fedora*text*.svg" \) -exec cp "$ASSET_DIR/arrera-logo.svg" {} \; 2>/dev/null || true
+    fi
+    find /usr/share/icons -type f \( -iname "*fedora*logo*.png" -o -iname "*fedora*text*.png" \) -exec cp "$ASSET_DIR/arrera-logo.png" {} \; 2>/dev/null || true
+
+    # 5. Dossiers spécifiques de branding Anaconda
     mkdir -p /usr/share/anaconda/pixmaps
     cp "$ASSET_DIR/arrera-logo.png" /usr/share/anaconda/pixmaps/sidebar-logo.png 2>/dev/null || true
     cp "$ASSET_DIR/arrera-logo.png" /usr/share/anaconda/pixmaps/anaconda_header.png 2>/dev/null || true
     cp "$ASSET_DIR/arrera-logo.png" /usr/share/anaconda/pixmaps/topbar-bg.png 2>/dev/null || true
 
-    # Mise à jour du cache des icônes
-    gtk-update-icon-cache -f /usr/share/icons/hicolor/ 2>/dev/null || true
+    # 6. Mise à jour du cache pour tous les thèmes d'icônes
+    for theme_dir in /usr/share/icons/*; do
+        if [ -d "$theme_dir" ]; then
+            gtk-update-icon-cache -f -t "$theme_dir" 2>/dev/null || true
+        fi
+    done
 fi
 
 # Installation de Fastfetch (JSON et logo ASCII)
@@ -219,6 +226,12 @@ disable-user-extensions=false
 enabled-extensions=['appindicatorsupport@rgcjonas.gmail.com', 'forge@jmmaranan.com', 'GPaste@gnome-shell-extensions.gnome.org', 'gpaste-reloaded@feuerfuchs.eu']
 DCONF_EXT_EOF
 
+# Activation des boutons Réduire (minimize), Maximiser (maximize) et Fermer (close) par défaut
+cat > /etc/dconf/db/local.d/02-wm-preferences <<'DCONF_WM_EOF'
+[org/gnome/desktop/wm/preferences]
+button-layout='appmenu:minimize,maximize,close'
+DCONF_WM_EOF
+
 # Désactivation des raccourcis GPaste conflictuels
 cat > /etc/dconf/db/local.d/99-arrera-gpaste <<'DCONF_GPASTE_EOF'
 [org/gnome/GPaste/keybindings]
@@ -233,8 +246,36 @@ DCONF_GPASTE_EOF
 
 dconf update 2>/dev/null || true
 
-# 8. Script et service de nettoyage post-installation (s'exécute UNIQUEMENT sur le système installé, pas le Live)
-echo "[8/8] Mise en place du service de nettoyage post-installation..."
+# 8. Règles Polkit pour la session Live (Pas de mot de passe demandé pour l'installateur Anaconda)
+echo "[8/9] Configuration des autorisations Polkit pour la session Live..."
+mkdir -p /etc/polkit-1/rules.d/
+
+cat > /etc/polkit-1/rules.d/49-liveuser.rules <<'POLKIT_LIVE_EOF'
+/* Autoriser les actions d'administration sans mot de passe sur la session Live */
+polkit.addAdminRule(function(action, subject) {
+    return ["unix-group:wheel"];
+});
+
+polkit.addRule(function(action, subject) {
+    if (subject.isInGroup("wheel")) {
+        return polkit.Result.YES;
+    }
+});
+POLKIT_LIVE_EOF
+
+cat > /etc/polkit-1/rules.d/50-anaconda.rules <<'POLKIT_ANACONDA_EOF'
+/* Lancement direct d'Anaconda et liveinst sans demande de mot de passe */
+polkit.addRule(function(action, subject) {
+    if (action.id.indexOf("org.fedoraproject.anaconda") === 0 ||
+        action.id.indexOf("org.freedesktop.policykit.exec") === 0 ||
+        action.id.indexOf("org.freedesktop.udisks2") === 0) {
+        return polkit.Result.YES;
+    }
+});
+POLKIT_ANACONDA_EOF
+
+# 9. Script et service de nettoyage post-installation (s'exécute UNIQUEMENT sur le système installé, pas le Live)
+echo "[9/9] Mise en place du service de nettoyage post-installation..."
 
 mkdir -p /usr/libexec
 cat > /usr/libexec/arrera-post-install-cleanup.sh <<'CLEANUP_SCRIPT_EOF'
@@ -253,7 +294,20 @@ if [ -f /etc/gdm/custom.conf ]; then
     sed -i 's/AutomaticLoginEnable=True/AutomaticLoginEnable=False/g' /etc/gdm/custom.conf
 fi
 
-# 2. Supprimer les raccourcis et l'auto-démarrage de l'installateur
+# 2. Supprimer l'utilisateur temporaire "arrera" de la session Live
+# et ne conserver que le compte utilisateur créé par l'utilisateur lors de l'installation
+if id "arrera" &>/dev/null; then
+    # Vérifie s'il existe un autre utilisateur (UID >= 1000)
+    OTHER_USER=$(awk -F: '$3 >= 1000 && $1 != "arrera" && $1 != "nobody" {print $1}' /etc/passwd | head -n 1)
+    if [ -n "$OTHER_USER" ]; then
+        pkill -9 -u arrera 2>/dev/null || true
+        userdel -r -f arrera 2>/dev/null || true
+        rm -rf /home/arrera
+        rm -f /etc/sudoers.d/arrera
+    fi
+fi
+
+# 3. Supprimer les raccourcis et l'auto-démarrage de l'installateur
 rm -f /home/arrera/Bureau/install-arrera.desktop
 rm -f /home/arrera/Desktop/install-arrera.desktop
 rm -f /home/arrera/.config/autostart/install-arrera.desktop
@@ -264,10 +318,14 @@ rm -f /usr/share/applications/install-arrera.desktop
 rm -f /usr/share/applications/liveinst.desktop
 rm -f /usr/share/applications/*anaconda*.desktop
 
-# 3. Supprimer Anaconda et les composants d'installation résiduels
+# 4. Supprimer les règles Polkit de la session Live
+rm -f /etc/polkit-1/rules.d/49-liveuser.rules
+rm -f /etc/polkit-1/rules.d/50-anaconda.rules
+
+# 5. Supprimer Anaconda et les composants d'installation résiduels
 rpm -e --nodeps anaconda anaconda-live anaconda-install-env-deps anaconda-gui anaconda-tui liveinst 2>/dev/null || true
 
-# 4. Désactiver et supprimer ce service de nettoyage
+# 6. Désactiver et supprimer ce service de nettoyage
 systemctl disable arrera-post-install-cleanup.service 2>/dev/null || true
 rm -f /etc/systemd/system/arrera-post-install-cleanup.service
 rm -f /usr/libexec/arrera-post-install-cleanup.sh
@@ -298,6 +356,11 @@ WantedBy=multi-user.target graphical.target
 SERVICE_EOF
 
 systemctl enable arrera-post-install-cleanup.service 2>/dev/null || true
+
+# Mise à jour complète de tous les paquets du système avant finalisation
+echo "Mise à jour complète des paquets (dnf upgrade)..."
+dnf -y upgrade --refresh 2>/dev/null || true
+dnf clean all 2>/dev/null || true
 
 # Régénération finale de GRUB (si présent)
 if [ -f /etc/default/grub ]; then
