@@ -440,43 +440,69 @@ SERVICE_EOF
 systemctl enable arrera-post-install-cleanup.service 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 11. Mise à jour automatique au premier démarrage (arrière-plan une fois connecté)
+# 11. Mise à jour automatique au premier démarrage (bloque GDM et affiche le chargement)
 # ------------------------------------------------------------------------------
-echo "[11/11] Configuration de la mise à jour automatique au premier démarrage..."
+echo "[11/11] Configuration de la mise à jour automatique au premier démarrage (avant GDM)..."
 
 mkdir -p /usr/libexec
 cat > /usr/libexec/arrera-first-boot-update.sh <<'UPDATE_SCRIPT_EOF'
 #!/bin/bash
 # ==============================================================================
-# Arrera Linux - Mise à jour automatique au premier démarrage
+# Arrera Linux - Mise à jour du premier démarrage avant l'affichage de GDM
 # ==============================================================================
-# Attend une connexion internet active puis effectue une mise à jour silencieuse
-# en arrière-plan et supprime ce service une fois terminé.
+# Bloque l'ouverture de session, affiche un message sur Plymouth, effectue la mise
+# à jour si le réseau est disponible, puis laisse GDM démarrer.
 # ==============================================================================
 
-# Attendre que le réseau soit accessible (jusqu'à 90 secondes)
+# Affichage du statut sur l'écran Plymouth
+if command -v plymouth &>/dev/null && plymouth --ping 2>/dev/null; then
+    plymouth message --text="Recherche de mises à jour..." 2>/dev/null || true
+fi
+
+# Attendre que le réseau soit accessible (jusqu'à 15 secondes max)
 ONLINE=0
-for i in $(seq 1 30); do
+for i in $(seq 1 15); do
     if curl -s --head --connect-timeout 2 https://mirrors.fedoraproject.org &>/dev/null || \
        curl -s --head --connect-timeout 2 https://1.1.1.1 &>/dev/null; then
         ONLINE=1
         break
     fi
-    sleep 3
+    sleep 1
 done
 
 if [ "$ONLINE" -eq 1 ]; then
-    # Lancer la mise à jour silencieuse en arrière-plan
-    echo "Connexion internet détectée, mise à jour du système Arrera..."
+    if command -v plymouth &>/dev/null && plymouth --ping 2>/dev/null; then
+        plymouth message --text="Mise à jour du système en cours..." 2>/dev/null || true
+    fi
+    
     dnf -y upgrade --refresh 2>/dev/null || true
     dnf clean all 2>/dev/null || true
-    
-    # Auto-suppression du service de mise à jour premier démarrage
+
+    # Auto-suppression définitive du service avant le redémarrage
     systemctl disable arrera-first-boot-update.service 2>/dev/null || true
     rm -f /etc/systemd/system/arrera-first-boot-update.service
     rm -f /usr/libexec/arrera-first-boot-update.sh
     systemctl daemon-reload 2>/dev/null || true
+
+    if command -v plymouth &>/dev/null && plymouth --ping 2>/dev/null; then
+        plymouth message --text="Mise à jour terminée. Redémarrage..." 2>/dev/null || true
+    fi
+    
+    sleep 2
+    systemctl reboot
+    exit 0
 fi
+
+# Si pas de connexion réseau : effacer les messages et laisser GDM démarrer
+if command -v plymouth &>/dev/null && plymouth --ping 2>/dev/null; then
+    plymouth hide-message --text="Recherche de mises à jour..." 2>/dev/null || true
+fi
+
+# Auto-suppression définitive du service
+systemctl disable arrera-first-boot-update.service 2>/dev/null || true
+rm -f /etc/systemd/system/arrera-first-boot-update.service
+rm -f /usr/libexec/arrera-first-boot-update.sh
+systemctl daemon-reload 2>/dev/null || true
 
 exit 0
 UPDATE_SCRIPT_EOF
@@ -485,20 +511,22 @@ chmod +x /usr/libexec/arrera-first-boot-update.sh
 
 cat > /etc/systemd/system/arrera-first-boot-update.service <<'UPDATE_SERVICE_EOF'
 [Unit]
-Description=Arrera Linux First Boot Background Update
-After=network-online.target NetworkManager.service
+Description=Arrera Linux First Boot Update Screen
+DefaultDependencies=no
+After=network-online.target NetworkManager.service local-fs.target
 Wants=network-online.target
+Before=gdm.service display-manager.service graphical.target
 ConditionKernelCommandLine=!rd.live.image
 ConditionPathExists=!/run/initramfs/live
 
 [Service]
-Type=simple
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=600
 ExecStart=/usr/libexec/arrera-first-boot-update.sh
-Restart=on-failure
-RestartSec=60
 
 [Install]
-WantedBy=multi-user.target graphical.target
+WantedBy=graphical.target multi-user.target
 UPDATE_SERVICE_EOF
 
 systemctl enable arrera-first-boot-update.service 2>/dev/null || true
