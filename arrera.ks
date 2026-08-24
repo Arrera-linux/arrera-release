@@ -108,7 +108,12 @@ loupe
 evince
 gnome-calendar
 gnome-clocks
+gnome-weather
 ptyxis
+
+gvfs-smb
+samba-client
+cifs-utils
 
 # === Extensions GNOME ===
 gnome-shell-extension-appindicator
