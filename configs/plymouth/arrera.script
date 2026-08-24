@@ -67,15 +67,29 @@ Plymouth.SetBootProgressFunction(progress_callback);
 Plymouth.SetRefreshFunction(refresh_callback);
 
 # --------------------------------------------------------------------------
-# Messages système (saisie mot de passe luks, fsck, etc.)
+# Messages et statut (ex: "Mise à jour du système...") sous la barre
 # --------------------------------------------------------------------------
-message_sprite = Sprite();
-message_sprite.SetPosition(Window.GetWidth() / 2, Window.GetHeight() - 60, 10000);
+status_sprite = Sprite();
+status_sprite.SetZ(10000);
+
+fun display_text(text) {
+    if (text == "") {
+        status_sprite.SetImage(NULL);
+    } else {
+        msg_image = Image.Text(text, 0.72, 0.76, 0.85, 1.0, "Sans 11");
+        status_sprite.SetImage(msg_image);
+        status_sprite.SetX(Window.GetWidth() / 2 - msg_image.GetWidth() / 2);
+        status_sprite.SetY(bar_y + bar_h + 18);
+    }
+}
 
 fun message_callback(text) {
-    msg_image = Image.Text(text, 0.8, 0.8, 0.8);
-    message_sprite.SetImage(msg_image);
-    message_sprite.SetX(Window.GetWidth() / 2 - msg_image.GetWidth() / 2);
+    display_text(text);
+}
+
+fun status_callback(status) {
+    display_text(status);
 }
 
 Plymouth.SetMessageFunction(message_callback);
+Plymouth.SetUpdateStatusFunction(status_callback);
