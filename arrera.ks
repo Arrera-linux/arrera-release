@@ -15,7 +15,7 @@
 poweroff
 
 lang fr_FR.UTF-8
-keyboard fr
+keyboard --vckeymap=fr --xlayouts='fr'
 timezone Europe/Paris --utc
 
 network --bootproto=dhcp --device=link --activate
@@ -28,10 +28,11 @@ selinux --permissive
 
 
 # --------------------------------------------------------------------------
-# Dépôts
+# Dépôts (Système 100% à jour à l'installation)
 # --------------------------------------------------------------------------
 
-url --url="https://download.fedoraproject.org/pub/fedora/linux/releases/$releasever/Everything/$basearch/os/"
+url --metalink="https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch"
+repo --name="updates" --metalink="https://mirrors.fedoraproject.org/metalink?repo=updates-released-f$releasever&arch=$basearch" --install --cost=50
 
 # Partitionnement (taille fixe requise par livemedia-creator --no-virt)
 zerombr
@@ -65,6 +66,25 @@ grub2-pc-modules
 grub2-tools
 efibootmgr
 
+# === Claviers et langues complètes ===
+xkeyboard-config
+libxkbcommon
+libxkbcommon-x11
+glibc-all-langpacks
+langpacks-fr
+langpacks-en
+langpacks-es
+langpacks-de
+langpacks-it
+langpacks-pt_BR
+langpacks-ar
+langpacks-zh_CN
+langpacks-ja
+ibus
+ibus-gtk3
+ibus-gtk4
+ibus-typing-booster
+
 # === Bureau GNOME minimal ===
 gnome-shell
 gnome-session
@@ -88,7 +108,12 @@ loupe
 evince
 gnome-calendar
 gnome-clocks
+gnome-weather
 ptyxis
+
+gvfs-smb
+samba-client
+cifs-utils
 
 # === Extensions GNOME ===
 gnome-shell-extension-appindicator
@@ -107,7 +132,7 @@ tar
 unzip
 gzip
 bzip2
-htop
+btop
 fastfetch
 bash-completion
 
@@ -145,7 +170,6 @@ liveinst
 # --------------------------------------------------------------------------
 # Configuration après installation
 # --------------------------------------------------------------------------
-
 
 %post --log=/root/arrera-post-install.log
 set -eux
@@ -203,19 +227,20 @@ AutomaticLogin=arrera
 [debug]
 GDM_EOF
 
-# Raccourci "Installer Arrera Linux" sur le bureau
+# Raccourci "Installer Arrera Blue-dev 2026" sur le bureau
 mkdir -p /home/arrera/Bureau
 cat > /home/arrera/Bureau/install-arrera.desktop <<'DESKTOP_EOF'
 [Desktop Entry]
-Name=Installer Arrera Linux
-Name[en]=Install Arrera Linux
-Comment=Installer Arrera Linux sur le disque dur
+Name=Installer Arrera Blue-dev 2026
+Name[en]=Install Arrera Blue-dev 2026
+Comment=Installer Arrera Blue-dev 2026 sur le disque dur
 Exec=/usr/bin/liveinst
 Icon=anaconda
 Terminal=false
 Type=Application
 Categories=System;GTK;
 StartupNotify=true
+X-GNOME-Autostart-enabled=true
 DESKTOP_EOF
 chmod +x /home/arrera/Bureau/install-arrera.desktop
 chown -R arrera:arrera /home/arrera/Bureau
@@ -223,9 +248,16 @@ chown -R arrera:arrera /home/arrera/Bureau
 # Aussi dans /usr/share/applications pour le menu
 cp /home/arrera/Bureau/install-arrera.desktop /usr/share/applications/install-arrera.desktop
 
+# Lancement AUTOMATIQUE d'Anaconda au démarrage de la session Live
+mkdir -p /etc/xdg/autostart
+cp /home/arrera/Bureau/install-arrera.desktop /etc/xdg/autostart/install-arrera.desktop
+
+mkdir -p /home/arrera/.config/autostart
+cp /home/arrera/Bureau/install-arrera.desktop /home/arrera/.config/autostart/install-arrera.desktop
+
 # Marquer le .desktop comme fiable (GNOME 44+)
 mkdir -p /home/arrera/.local/share
-chown -R arrera:arrera /home/arrera/.local
+chown -R arrera:arrera /home/arrera/.local /home/arrera/.config
 
 echo "=========================================="
 echo " FIN DE LA CONFIGURATION ARRERA LINUX    "
