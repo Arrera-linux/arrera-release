@@ -439,6 +439,70 @@ SERVICE_EOF
 
 systemctl enable arrera-post-install-cleanup.service 2>/dev/null || true
 
+# ------------------------------------------------------------------------------
+# 11. Mise à jour automatique au premier démarrage (arrière-plan une fois connecté)
+# ------------------------------------------------------------------------------
+echo "[11/11] Configuration de la mise à jour automatique au premier démarrage..."
+
+mkdir -p /usr/libexec
+cat > /usr/libexec/arrera-first-boot-update.sh <<'UPDATE_SCRIPT_EOF'
+#!/bin/bash
+# ==============================================================================
+# Arrera Linux - Mise à jour automatique au premier démarrage
+# ==============================================================================
+# Attend une connexion internet active puis effectue une mise à jour silencieuse
+# en arrière-plan et supprime ce service une fois terminé.
+# ==============================================================================
+
+# Attendre que le réseau soit accessible (jusqu'à 90 secondes)
+ONLINE=0
+for i in $(seq 1 30); do
+    if curl -s --head --connect-timeout 2 https://mirrors.fedoraproject.org &>/dev/null || \
+       curl -s --head --connect-timeout 2 https://1.1.1.1 &>/dev/null; then
+        ONLINE=1
+        break
+    fi
+    sleep 3
+done
+
+if [ "$ONLINE" -eq 1 ]; then
+    # Lancer la mise à jour silencieuse en arrière-plan
+    echo "Connexion internet détectée, mise à jour du système Arrera..."
+    dnf -y upgrade --refresh 2>/dev/null || true
+    dnf clean all 2>/dev/null || true
+    
+    # Auto-suppression du service de mise à jour premier démarrage
+    systemctl disable arrera-first-boot-update.service 2>/dev/null || true
+    rm -f /etc/systemd/system/arrera-first-boot-update.service
+    rm -f /usr/libexec/arrera-first-boot-update.sh
+    systemctl daemon-reload 2>/dev/null || true
+fi
+
+exit 0
+UPDATE_SCRIPT_EOF
+
+chmod +x /usr/libexec/arrera-first-boot-update.sh
+
+cat > /etc/systemd/system/arrera-first-boot-update.service <<'UPDATE_SERVICE_EOF'
+[Unit]
+Description=Arrera Linux First Boot Background Update
+After=network-online.target NetworkManager.service
+Wants=network-online.target
+ConditionKernelCommandLine=!rd.live.image
+ConditionPathExists=!/run/initramfs/live
+
+[Service]
+Type=simple
+ExecStart=/usr/libexec/arrera-first-boot-update.sh
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target graphical.target
+UPDATE_SERVICE_EOF
+
+systemctl enable arrera-first-boot-update.service 2>/dev/null || true
+
 # Régénération finale de GRUB (si présent)
 if [ -f /etc/default/grub ]; then
     echo "Régénération de grub.cfg..."
