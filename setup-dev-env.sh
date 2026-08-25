@@ -255,6 +255,23 @@ cat > /etc/dconf/db/local.d/02-wm-preferences <<'DCONF_WM_EOF'
 button-layout='appmenu:minimize,maximize,close'
 DCONF_WM_EOF
 
+# Activation du fond d'écran par défaut (blue.png du paquet arrera-wallpapers)
+BLUE_WALLPAPER=$(find /usr/share/backgrounds -name "blue.png" 2>/dev/null | head -n 1)
+if [ -z "$BLUE_WALLPAPER" ]; then
+    BLUE_WALLPAPER="/usr/share/backgrounds/arrera/blue.png"
+fi
+
+cat > /etc/dconf/db/local.d/03-background <<DCONF_BG_EOF
+[org/gnome/desktop/background]
+picture-uri='file://${BLUE_WALLPAPER}'
+picture-uri-dark='file://${BLUE_WALLPAPER}'
+picture-options='zoom'
+
+[org/gnome/desktop/screensaver]
+picture-uri='file://${BLUE_WALLPAPER}'
+picture-options='zoom'
+DCONF_BG_EOF
+
 # Désactivation des raccourcis GPaste conflictuels
 cat > /etc/dconf/db/local.d/99-arrera-gpaste <<'DCONF_GPASTE_EOF'
 [org/gnome/GPaste/keybindings]
@@ -304,14 +321,28 @@ POLKIT_ANACONDA_EOF
 # ------------------------------------------------------------------------------
 echo "[9/10] Mise en place de la protection permanente de la marque Arrera..."
 
-# 1. Empêcher DNF de réinstaller les paquets de marque Fedora qui écraseraient les logos
+# 1. Nettoyer les filtres d'exclusion DNF (pour que dnf update fonctionne sans conflit)
 if [ -f /etc/dnf/dnf.conf ]; then
-    if ! grep -q "excludepkgs=" /etc/dnf/dnf.conf; then
-        echo "excludepkgs=fedora-release-identity-basic,fedora-logos" >> /etc/dnf/dnf.conf
-    fi
+    sed -i '/excludepkgs=/d' /etc/dnf/dnf.conf
 fi
 
-# 2. Service systemd permanent : restaure os-release et logos s'ils sont modifiés
+# 2. Configuration permanente du dépôt Copr Arrera Blue sur le système installé
+mkdir -p /etc/yum.repos.d
+cat > /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:arrera-software:arrera_blue.repo <<'COPR_REPO_EOF'
+[copr:copr.fedorainfracloud.org:arrera-software:arrera_blue]
+name=Copr repo for arrera_blue owned by arrera-software
+baseurl=https://download.copr.fedorainfracloud.org/results/arrera-software/arrera_blue/fedora-$releasever-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/arrera-software/arrera_blue/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+cost=100
+COPR_REPO_EOF
+
+# 3. Service systemd permanent : restaure os-release et logos s'ils sont modifiés après un dnf update
 cat > /usr/libexec/arrera-branding-guard.sh <<'GUARD_EOF'
 #!/bin/bash
 # Arrera Branding Guard : Restaure automatiquement l'identité Arrera après toute mise à jour
@@ -333,6 +364,12 @@ if [ -d /boot/loader/entries ]; then
         sed -i 's/^title Fedora Linux/title Arrera Blue-dev 2026/g' "$conf"
         sed -i 's/^title Fedora/title Arrera Blue-dev 2026/g' "$conf"
     done
+fi
+if [ -f /usr/share/arrera-branding/arrera-logo.svg ]; then
+    find /usr/share/icons -type f \( -iname "*fedora*logo*.svg" -o -iname "*fedora*text*.svg" \) -exec cp -f /usr/share/arrera-branding/arrera-logo.svg {} \; 2>/dev/null || true
+fi
+if [ -f /usr/share/arrera-branding/arrera-logo.png ]; then
+    find /usr/share/icons -type f \( -iname "*fedora*logo*.png" -o -iname "*fedora*text*.png" \) -exec cp -f /usr/share/arrera-branding/arrera-logo.png {} \; 2>/dev/null || true
 fi
 exit 0
 GUARD_EOF
