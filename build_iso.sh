@@ -25,8 +25,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 KS_TEMPLATE="$SCRIPT_DIR/arrera.ks"
 SETUP_SCRIPT="$SCRIPT_DIR/setup-dev-env.sh"
-ASSET_DIR="$SCRIPT_DIR/asset"
-CONFIG_DIR="$SCRIPT_DIR/configs"
 
 BUILD_DIR="/var/tmp/arrera-build"
 RESULT_DIR="/var/tmp/arrera-iso"
@@ -59,14 +57,12 @@ fi
 info "Vérification des fichiers sources..."
 [ -f "$KS_TEMPLATE" ] || error "Kickstart template introuvable : $KS_TEMPLATE"
 [ -f "$SETUP_SCRIPT" ] || error "Script de setup introuvable : $SETUP_SCRIPT"
-[ -d "$ASSET_DIR" ]    || error "Dossier assets introuvable : $ASSET_DIR"
-[ -d "$CONFIG_DIR" ]   || error "Dossier configs introuvable : $CONFIG_DIR"
 ok "Tous les fichiers sources sont présents."
 
 # Outils requis
 info "Vérification des outils de compilation..."
 MISSING_TOOLS=()
-for tool in livemedia-creator base64 sed; do
+for tool in livemedia-creator sed; do
     if ! command -v "$tool" &>/dev/null; then
         MISSING_TOOLS+=("$tool")
     fi
@@ -101,65 +97,7 @@ mkdir -p "$BUILD_DIR"
 rm -f "$KS_FINAL"
 
 # --------------------------------------------------------------------------
-# 3. Encoder les assets en base64
-# --------------------------------------------------------------------------
-
-info "Encodage des assets en base64..."
-
-# Fonction pour encoder un fichier et générer la commande de décodage
-encode_asset() {
-    local src_file="$1"
-    local dest_path="$2"
-    local dest_dir
-    dest_dir=$(dirname "$dest_path")
-
-    if [ ! -f "$src_file" ]; then
-        warn "Asset introuvable, ignoré : $src_file" >&2
-        return
-    fi
-
-    local b64
-    b64=$(base64 -w0 "$src_file")
-    echo "mkdir -p $dest_dir"
-    echo "echo '$b64' | base64 -d > $dest_path"
-    info "  ✓ $(basename "$src_file") → $dest_path" >&2
-}
-
-# Générer toutes les commandes de décodage des assets
-ASSETS_BLOCK=""
-
-# Assets visuels (images)
-ASSETS_BLOCK+=$(encode_asset "$ASSET_DIR/arrera-logo.png" "/opt/arrera/asset/arrera-logo.png")
-ASSETS_BLOCK+=$'\n'
-ASSETS_BLOCK+=$(encode_asset "$ASSET_DIR/arrera-logo.svg" "/opt/arrera/asset/arrera-logo.svg")
-ASSETS_BLOCK+=$'\n'
-ASSETS_BLOCK+=$(encode_asset "$ASSET_DIR/arrera_gdm_logo_dark.png" "/opt/arrera/asset/arrera_gdm_logo_dark.png")
-ASSETS_BLOCK+=$'\n'
-ASSETS_BLOCK+=$(encode_asset "$ASSET_DIR/logo.png" "/opt/arrera/asset/logo.png")
-ASSETS_BLOCK+=$'\n'
-
-# Configs texte
-ASSETS_BLOCK+=$(encode_asset "$CONFIG_DIR/fastfetch-config.jsonc" "/opt/arrera/configs/fastfetch-config.jsonc")
-ASSETS_BLOCK+=$'\n'
-ASSETS_BLOCK+=$(encode_asset "$CONFIG_DIR/arrera-logo.txt" "/opt/arrera/configs/arrera-logo.txt")
-ASSETS_BLOCK+=$'\n'
-ASSETS_BLOCK+=$(encode_asset "$CONFIG_DIR/99-arrera-login" "/opt/arrera/configs/99-arrera-login")
-ASSETS_BLOCK+=$'\n'
-
-# Plymouth configs et images
-if [ -d "$CONFIG_DIR/plymouth" ]; then
-    for p_file in "$CONFIG_DIR/plymouth"/*; do
-        if [ -f "$p_file" ]; then
-            ASSETS_BLOCK+=$(encode_asset "$p_file" "/opt/arrera/configs/plymouth/$(basename "$p_file")")
-            ASSETS_BLOCK+=$'\n'
-        fi
-    done
-fi
-
-ok "Assets encodés."
-
-# --------------------------------------------------------------------------
-# 4. Assembler le kickstart final
+# 3. Assembler le kickstart final
 # --------------------------------------------------------------------------
 
 info "Assemblage du kickstart final..."
@@ -167,35 +105,23 @@ info "Assemblage du kickstart final..."
 # Lire le template
 cp "$KS_TEMPLATE" "$KS_FINAL"
 
-# Écrire les blocs dans des fichiers temporaires pour sed 'r'
-echo "$ASSETS_BLOCK" > "$BUILD_DIR/assets_block.tmp"
-
 # Retirer la ligne 'graphical' si présente (livemedia-creator interdit les modes d'affichage)
 sed -i '/^graphical$/d' "$KS_FINAL"
 
-# Passe 1 : remplacer __ASSETS_BASE64__ par le contenu des assets
-# Les ancres ^...$ garantissent qu'on ne matche pas les commentaires
-sed -e "/^__ASSETS_BASE64__$/{
-    r $BUILD_DIR/assets_block.tmp
-    d
-}" "$KS_FINAL" > "${KS_FINAL}.tmp1"
-
-# Passe 2 : remplacer __SETUP_DEV_ENV__ par le contenu du script
+# Remplacer __SETUP_DEV_ENV__ par le contenu du script setup-dev-env.sh
 sed -e "/^__SETUP_DEV_ENV__$/{
     r $SETUP_SCRIPT
     d
-}" "${KS_FINAL}.tmp1" > "$KS_FINAL"
-
-# Nettoyage des fichiers temporaires
-rm -f "${KS_FINAL}.tmp1" "$BUILD_DIR/assets_block.tmp"
+}" "$KS_FINAL" > "${KS_FINAL}.tmp"
+mv "${KS_FINAL}.tmp" "$KS_FINAL"
 
 ok "Kickstart final généré : $KS_FINAL"
 
-# Vérification rapide (cherche les placeholders seuls sur une ligne)
-if grep -qE "^__(SETUP_DEV_ENV|ASSETS_BASE64)__$" "$KS_FINAL"; then
-    error "Des placeholders n'ont pas été remplacés dans le kickstart final !"
+# Vérification rapide
+if grep -qE "^__SETUP_DEV_ENV__$" "$KS_FINAL"; then
+    error "Le placeholder __SETUP_DEV_ENV__ n'a pas été remplacé dans le kickstart final !"
 fi
-ok "Vérification des placeholders OK — tous remplacés."
+ok "Vérification des placeholders OK."
 
 # --------------------------------------------------------------------------
 # 5. Nettoyage de l'ancien résultat et des dossiers temporaires

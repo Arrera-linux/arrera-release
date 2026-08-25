@@ -1,8 +1,0 @@
-[Plymouth Theme]
-Name=Arrera Blue-dev 2026
-Description=Arrera Blue-dev 2026 Boot Splash
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/arrera
-ScriptFile=/usr/share/plymouth/themes/arrera/arrera.script
