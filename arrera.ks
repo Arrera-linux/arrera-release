@@ -149,6 +149,7 @@ plymouth
 plymouth-plugin-script
 arrera-branding
 arrera-wallpapers
+arrera-gnome-config
 
 # Audio, vidéo et réseau
 pipewire

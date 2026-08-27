@@ -107,72 +107,9 @@ if [ -d /usr/share/plymouth/themes/arrera ]; then
 fi
 
 # ------------------------------------------------------------------------------
-# 3. Configuration des paramètres GNOME (dconf)
+# 3. Règles Polkit pour la session Live
 # ------------------------------------------------------------------------------
-echo "[3/6] Configuration des paramètres GNOME (Claviers, Boutons, Extensions, Wallpaper)..."
-
-mkdir -p /etc/dconf/profile
-cat > /etc/dconf/profile/user <<'PROFILE_EOF'
-user-db:user
-system-db:local
-PROFILE_EOF
-
-mkdir -p /etc/dconf/db/local.d/
-
-# Claviers internationaux disponibles
-cat > /etc/dconf/db/local.d/00-input-sources <<'DCONF_INPUT_EOF'
-[org/gnome/desktop/input-sources]
-show-all-sources=true
-DCONF_INPUT_EOF
-
-# Extensions activées par défaut
-cat > /etc/dconf/db/local.d/01-extensions <<'DCONF_EXT_EOF'
-[org/gnome/shell]
-disable-user-extensions=false
-enabled-extensions=['appindicatorsupport@rgcjonas.gmail.com', 'forge@jmmaranan.com', 'GPaste@gnome-shell-extensions.gnome.org', 'gpaste-reloaded@feuerfuchs.eu']
-DCONF_EXT_EOF
-
-# Boutons Réduire, Maximiser et Fermer par défaut
-cat > /etc/dconf/db/local.d/02-wm-preferences <<'DCONF_WM_EOF'
-[org/gnome/desktop/wm/preferences]
-button-layout='appmenu:minimize,maximize,close'
-DCONF_WM_EOF
-
-# Fond d'écran par défaut (blue.png)
-BLUE_WALLPAPER=$(find /usr/share/backgrounds -name "blue.png" 2>/dev/null | head -n 1)
-if [ -z "$BLUE_WALLPAPER" ]; then
-    BLUE_WALLPAPER="/usr/share/backgrounds/arrera/blue.png"
-fi
-
-cat > /etc/dconf/db/local.d/03-background <<DCONF_BG_EOF
-[org/gnome/desktop/background]
-picture-uri='file://${BLUE_WALLPAPER}'
-picture-uri-dark='file://${BLUE_WALLPAPER}'
-picture-options='zoom'
-
-[org/gnome/desktop/screensaver]
-picture-uri='file://${BLUE_WALLPAPER}'
-picture-options='zoom'
-DCONF_BG_EOF
-
-# Désactivation des raccourcis GPaste conflictuels
-cat > /etc/dconf/db/local.d/99-arrera-gpaste <<'DCONF_GPASTE_EOF'
-[org/gnome/GPaste/keybindings]
-launch-ui=''
-pop-from-history=''
-show-history=''
-sync-clipboard-to-primary=''
-sync-primary-to-clipboard=''
-upload-to-pastebin=''
-convert-to-password=''
-DCONF_GPASTE_EOF
-
-dconf update 2>/dev/null || true
-
-# ------------------------------------------------------------------------------
-# 4. Règles Polkit pour la session Live
-# ------------------------------------------------------------------------------
-echo "[4/6] Configuration des autorisations Polkit pour la session Live..."
+echo "[3/5] Configuration des autorisations Polkit pour la session Live..."
 mkdir -p /etc/polkit-1/rules.d/
 
 cat > /etc/polkit-1/rules.d/49-liveuser.rules <<'POLKIT_LIVE_EOF'
@@ -197,9 +134,9 @@ polkit.addRule(function(action, subject) {
 POLKIT_ANACONDA_EOF
 
 # ------------------------------------------------------------------------------
-# 5. Dépôt Copr persistant et service de protection de marque
+# 4. Dépôt Copr persistant et service de protection de marque
 # ------------------------------------------------------------------------------
-echo "[5/6] Configuration du dépôt Copr et du service de protection Arrera..."
+echo "[4/5] Configuration du dépôt Copr et du service de protection Arrera..."
 
 mkdir -p /etc/yum.repos.d
 cat > /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:arrera-software:arrera_blue.repo <<'COPR_REPO_EOF'
@@ -261,9 +198,9 @@ GUARD_SERVICE_EOF
 systemctl enable arrera-branding-guard.service 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 6. Service de nettoyage post-installation (exécuté 1 seule fois sur disque)
+# 5. Service de nettoyage post-installation (exécuté 1 seule fois sur disque)
 # ------------------------------------------------------------------------------
-echo "[6/6] Mise en place du service de nettoyage post-installation..."
+echo "[5/5] Mise en place du service de nettoyage post-installation..."
 
 mkdir -p /usr/libexec
 cat > /usr/libexec/arrera-post-install-cleanup.sh <<'CLEANUP_SCRIPT_EOF'
