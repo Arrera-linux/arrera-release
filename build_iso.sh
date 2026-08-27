@@ -29,6 +29,7 @@ SETUP_SCRIPT="$SCRIPT_DIR/setup-dev-env.sh"
 BUILD_DIR="/var/tmp/arrera-build"
 RESULT_DIR="/var/tmp/arrera-iso"
 KS_FINAL="$BUILD_DIR/arrera-final.ks"
+LMC_LOG="$BUILD_DIR/livemedia.log"
 ISO_NAME="Arrera-Blue-dev-2026.iso"
 VOLID="Arrera_Blue_dev_2026"
 
