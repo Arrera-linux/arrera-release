@@ -153,6 +153,9 @@ enabled_metadata=1
 cost=100
 COPR_REPO_EOF
 
+# Importer la clé publique GPG officielle du Copr Arrera
+rpm --import https://download.copr.fedorainfracloud.org/results/arrera-software/arrera_blue/pubkey.gpg 2>/dev/null || true
+
 cat > /usr/libexec/arrera-branding-guard.sh <<'GUARD_EOF'
 #!/bin/bash
 # Arrera Branding Guard : Restaure automatiquement l'identité Arrera après toute mise à jour
