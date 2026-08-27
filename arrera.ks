@@ -2,8 +2,7 @@
 # Arrera Linux - Kickstart autonome basé sur Fedora Workstation
 # ==============================================================================
 # IMPORTANT : Ce fichier est un TEMPLATE.
-# Le script build_iso.sh remplace les placeholders par le contenu réel
-# de setup-dev-env.sh et des assets, puis génère le .ks final.
+# Le script build_iso.sh injecte setup-dev-env.sh et génère le .ks final.
 # NE PAS utiliser ce fichier directement avec livemedia-creator.
 # ==============================================================================
 
@@ -11,7 +10,7 @@
 # Configuration générale
 # --------------------------------------------------------------------------
 
-# Arrêt automatique après installation (évite qu'Anaconda reste bloqué)
+# Arrêt automatique après installation
 poweroff
 
 lang fr_FR.UTF-8
@@ -28,11 +27,12 @@ selinux --permissive
 
 
 # --------------------------------------------------------------------------
-# Dépôts (Système 100% à jour à l'installation)
+# Dépôts (Système 100% à jour à l'installation + Dépôt Copr Arrera)
 # --------------------------------------------------------------------------
 
 url --metalink="https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch"
 repo --name="updates" --metalink="https://mirrors.fedoraproject.org/metalink?repo=updates-released-f$releasever&arch=$basearch" --install --cost=50
+repo --name="copr-arrera-blue" --baseurl="https://download.copr.fedorainfracloud.org/results/arrera-software/arrera_blue/fedora-$releasever-$basearch/" --install --cost=100
 
 # Partitionnement (taille fixe requise par livemedia-creator --no-virt)
 zerombr
@@ -111,6 +111,7 @@ gnome-clocks
 gnome-weather
 ptyxis
 
+# === Partage de fichiers Windows (SMB/CIFS) ===
 gvfs-smb
 samba-client
 cifs-utils
@@ -141,11 +142,14 @@ python3
 python3-pip
 qt5-qtbase
 
-# Identité visuelle
+# === Écosystème Arrera (depuis Copr) ===
 chafa
 ImageMagick
 plymouth
 plymouth-plugin-script
+arrera-branding
+arrera-wallpapers
+arrera-gnome-config
 
 # Audio, vidéo et réseau
 pipewire
@@ -154,7 +158,7 @@ wireplumber
 NetworkManager-wifi
 firewalld
 
-# Polices (évite un bureau sans texte lisible)
+# Polices
 google-noto-sans-fonts
 google-noto-sans-mono-fonts
 dejavu-sans-fonts
@@ -190,22 +194,8 @@ systemctl enable firewalld
 # Forcer le démarrage en mode graphique (sinon GDM ne se lance pas)
 systemctl set-default graphical.target
 
-# Création du dossier Arrera pour les assets
-mkdir -p /opt/arrera/asset
-mkdir -p /opt/arrera/configs/plymouth
-
-# --- DÉBUT : Assets encodés en base64 (injectés par build_iso.sh) ---
-__ASSETS_BASE64__
-# --- FIN : Assets encodés en base64 ---
-
-# Le contenu du script de setup est injecté directement ci-dessous par build_iso.sh
-# IMPORTANT : on n'utilise PAS de heredoc (<<'EOF') car pykickstart/Anaconda le corrompt.
-# Le contenu de setup-dev-env.sh est exécuté directement comme commandes %post.
-export ARRERA_ROOT="/opt/arrera"
+# Le contenu du script de configuration est injecté directement ci-dessous par build_iso.sh
 __SETUP_DEV_ENV__
-
-# Nettoyage
-rm -rf /opt/arrera
 
 # ================================================================
 # Configuration de la session Live (auto-login + installateur)

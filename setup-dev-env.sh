@@ -3,9 +3,9 @@
 # ==============================================================================
 # Script de configuration : Environnement Arrera Linux V2 (Blue-dev 2026)
 # ==============================================================================
-# Ce script peut être exécuté :
-#   - Manuellement sur un système existant : sudo ./setup-dev-env.sh
-#   - Depuis le %post du kickstart : le build_iso.sh l'injecte automatiquement
+# Ce script s'exécute depuis le %post du kickstart (ou manuellement en dev).
+# Les assets graphiques, logos, Plymouth et GDM sont fournis par arrera-branding.
+# Les fonds d'écran sont fournis par arrera-wallpapers.
 # ==============================================================================
 
 # Vérification des privilèges root (nécessaire pour écrire dans /etc)
@@ -19,21 +19,10 @@ echo " Configuration de l'environnement         "
 echo " Arrera Blue-dev 2026                     "
 echo "=========================================="
 
-# En mode kickstart, ARRERA_ROOT est défini par le %post.
-# En mode manuel, on utilise le répertoire courant.
-REPO_DIR="${ARRERA_ROOT:-$(pwd)}"
-ASSET_DIR="$REPO_DIR/asset"
-
-# ------------------------------------------------------------------------------
-# 0. Nettoyage des caches DNF
-# ------------------------------------------------------------------------------
-echo "[0/9] Nettoyage des caches..."
-dnf clean all 2>/dev/null || true
-
 # ------------------------------------------------------------------------------
 # 1. Configuration de l'identité du système (os-release)
 # ------------------------------------------------------------------------------
-echo "[1/9] Mise à jour de /etc/os-release et /usr/lib/os-release..."
+echo "[1/6] Mise à jour de /etc/os-release et /usr/lib/os-release..."
 mkdir -p /usr/lib
 cat <<'EOF' > /usr/lib/os-release
 NAME="Arrera"
@@ -61,39 +50,36 @@ VARIANT="Workstation Edition"
 VARIANT_ID=workstation
 EOF
 
-# /etc/os-release doit pointer sur /usr/lib/os-release ou être identique
 rm -f /etc/os-release
 cp /usr/lib/os-release /etc/os-release
 
 # Nom d'hôte par défaut
 echo "arrera-blue" > /etc/hostname
 
-# ------------------------------------------------------------------------------
-# 2. Création du fichier de release et des liens symboliques
-# ------------------------------------------------------------------------------
-echo "[2/10] Création de /etc/arrera-release et des liens de compatibilité..."
+# Création du fichier de release et des liens de compatibilité
 echo "Arrera Blue-dev 2026" > /etc/arrera-release
-
 for release_file in fedora-release system-release redhat-release; do
-    if [ -f "/etc/$release_file" ] || [ -L "/etc/$release_file" ]; then
-        rm -f "/etc/$release_file"
-    fi
+    rm -f "/etc/$release_file" 2>/dev/null || true
     ln -s /etc/arrera-release "/etc/$release_file"
 done
 
+# Sauvegarde permanente des fichiers maîtres de marque
+mkdir -p /usr/share/arrera-branding
+cp /usr/lib/os-release /usr/share/arrera-branding/os-release 2>/dev/null || true
+cp /etc/arrera-release /usr/share/arrera-branding/arrera-release 2>/dev/null || true
+
 # ------------------------------------------------------------------------------
-# 3. Modification du gestionnaire de démarrage GRUB et des entrées BLS
+# 2. Configuration du chargeur d'amorçage GRUB et des hooks noyau
 # ------------------------------------------------------------------------------
-echo "[3/10] Configuration du menu de démarrage GRUB et des hooks de mise à jour noyau..."
+echo "[2/6] Configuration du menu de démarrage GRUB..."
 if [ -f /etc/default/grub ]; then
     sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Arrera Blue-dev 2026"/' /etc/default/grub
 fi
 
-# Création d'un hook kernel-install pour que chaque mise à jour du noyau nomme l'entrée "Arrera Blue-dev 2026"
+# Hook kernel-install pour nommer chaque mise à jour du noyau en "Arrera Blue-dev 2026"
 mkdir -p /etc/kernel/install.d
 cat <<'KERNEL_INSTALL_EOF' > /etc/kernel/install.d/99-arrera-title.install
 #!/bin/bash
-# Hook Arrera Linux : renomme toujours l'entrée de boot en Arrera Blue-dev 2026
 COMMAND="$1"
 if [ "$COMMAND" = "add" ] || [ -d "/boot/loader/entries" ]; then
     for conf in /boot/loader/entries/*.conf; do
@@ -115,172 +101,21 @@ if [ -d /boot/loader/entries ]; then
     done
 fi
 
-# ------------------------------------------------------------------------------
-# 4. Installation des assets visuels (Logos PNG, SVG, Fastfetch)
-# ------------------------------------------------------------------------------
-echo "[4/10] Installation des assets visuels et remplacement complet du branding Fedora..."
-
-if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
-    # 1. Copie dans /usr/share/pixmaps (utilisé par Anaconda, GDM, Paramètres GNOME / À Propos)
-    mkdir -p /usr/share/pixmaps
-    for name in arrera-logo arrera-logo-text arrera-logo-text-dark system-logo-icon fedora-logo-icon fedora-logo fedora_logo fedora-logo-text fedora-logo-text-dark anaconda_header; do
-        cp "$ASSET_DIR/arrera-logo.png" "/usr/share/pixmaps/${name}.png" 2>/dev/null || true
-        if [ -f "$ASSET_DIR/arrera-logo.svg" ]; then
-            cp "$ASSET_DIR/arrera-logo.svg" "/usr/share/pixmaps/${name}.svg" 2>/dev/null || true
-        fi
-    done
-
-    # 2. Copie dans tous les répertoires d'icônes hicolor (16x16 -> 512x512)
-    for size in 16x16 22x22 24x24 32x32 48x48 64x64 96x96 128x128 256x256 512x512; do
-        mkdir -p "/usr/share/icons/hicolor/$size/apps"
-        for name in arrera-logo arrera-logo-text arrera-logo-text-dark system-logo-icon fedora-logo-icon fedora-logo fedora-logo-text fedora-logo-text-dark; do
-            cp "$ASSET_DIR/arrera-logo.png" "/usr/share/icons/hicolor/$size/apps/${name}.png" 2>/dev/null || true
-        done
-    done
-
-    # 3. Répertoire scalable (CRITIQUE pour GNOME Control Center et Anaconda WebUI)
-    mkdir -p /usr/share/icons/hicolor/scalable/apps
-    if [ -f "$ASSET_DIR/arrera-logo.svg" ]; then
-        for name in arrera-logo arrera-logo-text arrera-logo-text-dark system-logo-icon fedora-logo-icon fedora-logo fedora-logo-text fedora-logo-text-dark; do
-            cp "$ASSET_DIR/arrera-logo.svg" "/usr/share/icons/hicolor/scalable/apps/${name}.svg" 2>/dev/null || true
-        done
-    fi
-
-    # 4. Remplacer tout fichier SVG ou PNG Fedora existant dans /usr/share/icons
-    if [ -f "$ASSET_DIR/arrera-logo.svg" ]; then
-        find /usr/share/icons -type f \( -iname "*fedora*logo*.svg" -o -iname "*fedora*text*.svg" \) -exec cp "$ASSET_DIR/arrera-logo.svg" {} \; 2>/dev/null || true
-    fi
-    find /usr/share/icons -type f \( -iname "*fedora*logo*.png" -o -iname "*fedora*text*.png" \) -exec cp "$ASSET_DIR/arrera-logo.png" {} \; 2>/dev/null || true
-
-    # 5. Dossiers spécifiques de branding Anaconda
-    mkdir -p /usr/share/anaconda/pixmaps
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/anaconda/pixmaps/sidebar-logo.png 2>/dev/null || true
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/anaconda/pixmaps/anaconda_header.png 2>/dev/null || true
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/anaconda/pixmaps/topbar-bg.png 2>/dev/null || true
-
-    # 6. Mise à jour du cache pour tous les thèmes d'icônes
-    for theme_dir in /usr/share/icons/*; do
-        if [ -d "$theme_dir" ]; then
-            gtk-update-icon-cache -f -t "$theme_dir" 2>/dev/null || true
-        fi
-    done
-fi
-
-# Sauvegarde permanente des fichiers maîtres de marque Arrera (pour restauration automatique en cas d'update)
-mkdir -p /usr/share/arrera-branding
-cp /usr/lib/os-release /usr/share/arrera-branding/os-release 2>/dev/null || true
-cp /etc/arrera-release /usr/share/arrera-branding/arrera-release 2>/dev/null || true
-if [ -f "$ASSET_DIR/arrera-logo.png" ]; then
-    cp "$ASSET_DIR/arrera-logo.png" /usr/share/arrera-branding/ 2>/dev/null || true
-fi
-if [ -f "$ASSET_DIR/arrera-logo.svg" ]; then
-    cp "$ASSET_DIR/arrera-logo.svg" /usr/share/arrera-branding/ 2>/dev/null || true
-fi
-
-# Installation de Fastfetch (JSON et logo ASCII)
-if [ -d "$REPO_DIR/configs" ]; then
-    mkdir -p /etc/fastfetch
-    if [ -f "$REPO_DIR/configs/fastfetch-config.jsonc" ]; then
-        cp "$REPO_DIR/configs/fastfetch-config.jsonc" /etc/fastfetch/config.jsonc
-    fi
-    if [ -f "$REPO_DIR/configs/arrera-logo.txt" ]; then
-        cp "$REPO_DIR/configs/arrera-logo.txt" /etc/fastfetch/arrera-logo.txt
-    fi
-fi
-
-# ------------------------------------------------------------------------------
-# 5. Configuration de l'écran de démarrage (Plymouth - Style macOS)
-# ------------------------------------------------------------------------------
-echo "[5/10] Configuration du thème Plymouth (Style macOS)..."
-
-if [ -d "$REPO_DIR/configs/plymouth" ] && \
-   [ -f "$REPO_DIR/configs/plymouth/arrera.plymouth" ] && \
-   [ -f "$REPO_DIR/configs/plymouth/arrera.script" ]; then
-
-    mkdir -p /usr/share/plymouth/themes/arrera/
-    cp "$REPO_DIR/configs/plymouth/"* /usr/share/plymouth/themes/arrera/ 2>/dev/null || true
-
-    if [ -f "$ASSET_DIR/logo.png" ]; then
-        cp "$ASSET_DIR/logo.png" /usr/share/plymouth/themes/arrera/
-    fi
-
+# Activation du thème Plymouth Arrera
+if [ -d /usr/share/plymouth/themes/arrera ]; then
     plymouth-set-default-theme -R arrera 2>/dev/null || true
-else
-    echo "  [SKIP] Fichiers Plymouth non trouvés dans $REPO_DIR/configs/plymouth/"
 fi
 
 # ------------------------------------------------------------------------------
-# 6. Configuration de l'écran de connexion (GDM)
+# 3. Règles Polkit pour la session Live
 # ------------------------------------------------------------------------------
-echo "[6/10] Configuration de GDM..."
-mkdir -p /etc/dconf/db/gdm.d/
-
-if [ -f "$REPO_DIR/configs/99-arrera-login" ]; then
-    cp "$REPO_DIR/configs/99-arrera-login" /etc/dconf/db/gdm.d/
-fi
-
-if [ -f "$ASSET_DIR/arrera_gdm_logo_dark.png" ]; then
-    cp "$ASSET_DIR/arrera_gdm_logo_dark.png" /usr/share/pixmaps/
-fi
-
-# ------------------------------------------------------------------------------
-# 7. Configuration des paramètres GNOME (Claviers, Boutons, Extensions, dconf)
-# ------------------------------------------------------------------------------
-echo "[7/10] Configuration des paramètres GNOME (Claviers + Boutons + Extensions)..."
-
-mkdir -p /etc/dconf/profile
-cat > /etc/dconf/profile/user <<'PROFILE_EOF'
-user-db:user
-system-db:local
-PROFILE_EOF
-
-mkdir -p /etc/dconf/db/local.d/
-
-# Affichage de tous les layouts de claviers internationaux sans forcer de disposition spécifique
-cat > /etc/dconf/db/local.d/00-input-sources <<'DCONF_INPUT_EOF'
-[org/gnome/desktop/input-sources]
-show-all-sources=true
-DCONF_INPUT_EOF
-
-# Activation des extensions GNOME par défaut
-cat > /etc/dconf/db/local.d/01-extensions <<'DCONF_EXT_EOF'
-[org/gnome/shell]
-disable-user-extensions=false
-enabled-extensions=['appindicatorsupport@rgcjonas.gmail.com', 'forge@jmmaranan.com', 'GPaste@gnome-shell-extensions.gnome.org', 'gpaste-reloaded@feuerfuchs.eu']
-DCONF_EXT_EOF
-
-# Activation des boutons Réduire (minimize), Maximiser (maximize) et Fermer (close) par défaut
-cat > /etc/dconf/db/local.d/02-wm-preferences <<'DCONF_WM_EOF'
-[org/gnome/desktop/wm/preferences]
-button-layout='appmenu:minimize,maximize,close'
-DCONF_WM_EOF
-
-# Désactivation des raccourcis GPaste conflictuels
-cat > /etc/dconf/db/local.d/99-arrera-gpaste <<'DCONF_GPASTE_EOF'
-[org/gnome/GPaste/keybindings]
-launch-ui=''
-pop-from-history=''
-show-history=''
-sync-clipboard-to-primary=''
-sync-primary-to-clipboard=''
-upload-to-pastebin=''
-convert-to-password=''
-DCONF_GPASTE_EOF
-
-dconf update 2>/dev/null || true
-
-# ------------------------------------------------------------------------------
-# 8. Règles Polkit pour la session Live (Pas de mot de passe demandé)
-# ------------------------------------------------------------------------------
-echo "[8/10] Configuration des autorisations Polkit pour la session Live..."
+echo "[3/5] Configuration des autorisations Polkit pour la session Live..."
 mkdir -p /etc/polkit-1/rules.d/
 
 cat > /etc/polkit-1/rules.d/49-liveuser.rules <<'POLKIT_LIVE_EOF'
-/* Autoriser les actions d'administration sans mot de passe sur la session Live */
 polkit.addAdminRule(function(action, subject) {
     return ["unix-group:wheel"];
 });
-
 polkit.addRule(function(action, subject) {
     if (subject.isInGroup("wheel")) {
         return polkit.Result.YES;
@@ -289,7 +124,6 @@ polkit.addRule(function(action, subject) {
 POLKIT_LIVE_EOF
 
 cat > /etc/polkit-1/rules.d/50-anaconda.rules <<'POLKIT_ANACONDA_EOF'
-/* Lancement direct d'Anaconda et liveinst sans demande de mot de passe */
 polkit.addRule(function(action, subject) {
     if (action.id.indexOf("org.fedoraproject.anaconda") === 0 ||
         action.id.indexOf("org.freedesktop.policykit.exec") === 0 ||
@@ -300,18 +134,25 @@ polkit.addRule(function(action, subject) {
 POLKIT_ANACONDA_EOF
 
 # ------------------------------------------------------------------------------
-# 9. Protection permanente de la marque Arrera (résiste à tous les dnf update futurs)
+# 4. Dépôt Copr persistant et service de protection de marque
 # ------------------------------------------------------------------------------
-echo "[9/10] Mise en place de la protection permanente de la marque Arrera..."
+echo "[4/5] Configuration du dépôt Copr et du service de protection Arrera..."
 
-# 1. Empêcher DNF de réinstaller les paquets de marque Fedora qui écraseraient les logos
-if [ -f /etc/dnf/dnf.conf ]; then
-    if ! grep -q "excludepkgs=" /etc/dnf/dnf.conf; then
-        echo "excludepkgs=fedora-release-identity-basic,fedora-logos" >> /etc/dnf/dnf.conf
-    fi
-fi
+mkdir -p /etc/yum.repos.d
+cat > /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:arrera-software:arrera_blue.repo <<'COPR_REPO_EOF'
+[copr:copr.fedorainfracloud.org:arrera-software:arrera_blue]
+name=Copr repo for arrera_blue owned by arrera-software
+baseurl=https://download.copr.fedorainfracloud.org/results/arrera-software/arrera_blue/fedora-$releasever-$basearch/
+type=rpm-md
+skip_if_unavailable=True
+gpgcheck=1
+gpgkey=https://download.copr.fedorainfracloud.org/results/arrera-software/arrera_blue/pubkey.gpg
+repo_gpgcheck=0
+enabled=1
+enabled_metadata=1
+cost=100
+COPR_REPO_EOF
 
-# 2. Service systemd permanent : restaure os-release et logos s'ils sont modifiés
 cat > /usr/libexec/arrera-branding-guard.sh <<'GUARD_EOF'
 #!/bin/bash
 # Arrera Branding Guard : Restaure automatiquement l'identité Arrera après toute mise à jour
@@ -357,29 +198,21 @@ GUARD_SERVICE_EOF
 systemctl enable arrera-branding-guard.service 2>/dev/null || true
 
 # ------------------------------------------------------------------------------
-# 10. Script et service de nettoyage post-installation
+# 5. Service de nettoyage post-installation (exécuté 1 seule fois sur disque)
 # ------------------------------------------------------------------------------
-echo "[10/10] Mise en place du service de nettoyage post-installation..."
+echo "[5/5] Mise en place du service de nettoyage post-installation..."
 
 mkdir -p /usr/libexec
 cat > /usr/libexec/arrera-post-install-cleanup.sh <<'CLEANUP_SCRIPT_EOF'
 #!/bin/bash
-# ==============================================================================
-# Arrera Linux - Nettoyage post-installation automatique
-# ==============================================================================
-# Ce script s'exécute UNIQUEMENT au premier démarrage du système installé sur disque.
-# Il ne s'exécute JAMAIS sur l'environnement Live ISO.
-# ==============================================================================
-
-# 1. Désactiver l'auto-login GDM (retour au login avec mot de passe)
+# 1. Désactiver l'auto-login GDM (retour au login utilisateur avec mot de passe)
 if [ -f /etc/gdm/custom.conf ]; then
     sed -i '/AutomaticLoginEnable=True/d' /etc/gdm/custom.conf
     sed -i '/AutomaticLogin=arrera/d' /etc/gdm/custom.conf
     sed -i 's/AutomaticLoginEnable=True/AutomaticLoginEnable=False/g' /etc/gdm/custom.conf
 fi
 
-# 2. Supprimer l'utilisateur temporaire "arrera" de la session Live
-# et ne conserver que le compte utilisateur créé par l'utilisateur lors de l'installation
+# 2. Supprimer le compte live "arrera" et conserver le compte créé lors de l'installation
 if id "arrera" &>/dev/null; then
     OTHER_USER=$(awk -F: '$3 >= 1000 && $1 != "arrera" && $1 != "nobody" {print $1}' /etc/passwd | head -n 1)
     if [ -n "$OTHER_USER" ]; then
@@ -390,7 +223,7 @@ if id "arrera" &>/dev/null; then
     fi
 fi
 
-# 3. Supprimer les raccourcis et l'auto-démarrage de l'installateur
+# 3. Supprimer les raccourcis et autostarts de l'installateur
 rm -f /home/arrera/Bureau/install-arrera.desktop
 rm -f /home/arrera/Desktop/install-arrera.desktop
 rm -f /home/arrera/.config/autostart/install-arrera.desktop
@@ -401,14 +234,14 @@ rm -f /usr/share/applications/install-arrera.desktop
 rm -f /usr/share/applications/liveinst.desktop
 rm -f /usr/share/applications/*anaconda*.desktop
 
-# 4. Supprimer les règles Polkit de la session Live
+# 4. Supprimer les règles Polkit du Live
 rm -f /etc/polkit-1/rules.d/49-liveuser.rules
 rm -f /etc/polkit-1/rules.d/50-anaconda.rules
 
-# 5. Supprimer Anaconda et les composants d'installation résiduels
+# 5. Supprimer Anaconda du système installé
 rpm -e --nodeps anaconda anaconda-live anaconda-install-env-deps anaconda-gui anaconda-tui liveinst 2>/dev/null || true
 
-# 6. Désactiver et supprimer ce service de nettoyage
+# 6. Auto-suppression de ce service
 systemctl disable arrera-post-install-cleanup.service 2>/dev/null || true
 rm -f /etc/systemd/system/arrera-post-install-cleanup.service
 rm -f /usr/libexec/arrera-post-install-cleanup.sh
@@ -439,69 +272,8 @@ SERVICE_EOF
 
 systemctl enable arrera-post-install-cleanup.service 2>/dev/null || true
 
-# ------------------------------------------------------------------------------
-# 11. Mise à jour automatique au premier démarrage (arrière-plan une fois connecté)
-# ------------------------------------------------------------------------------
-echo "[11/11] Configuration de la mise à jour automatique au premier démarrage..."
-
-mkdir -p /usr/libexec
-cat > /usr/libexec/arrera-first-boot-update.sh <<'UPDATE_SCRIPT_EOF'
-#!/bin/bash
-# ==============================================================================
-# Arrera Linux - Mise à jour automatique au premier démarrage
-# ==============================================================================
-# Attend une connexion internet active puis effectue une mise à jour silencieuse
-# en arrière-plan et supprime ce service une fois terminé.
-# ==============================================================================
-
-# Attendre que le réseau soit accessible (jusqu'à 90 secondes)
-ONLINE=0
-for i in $(seq 1 30); do
-    if curl -s --head --connect-timeout 2 https://mirrors.fedoraproject.org &>/dev/null || \
-       curl -s --head --connect-timeout 2 https://1.1.1.1 &>/dev/null; then
-        ONLINE=1
-        break
-    fi
-    sleep 3
-done
-
-if [ "$ONLINE" -eq 1 ]; then
-    # Lancer la mise à jour silencieuse en arrière-plan
-    echo "Connexion internet détectée, mise à jour du système Arrera..."
-    dnf -y upgrade --refresh 2>/dev/null || true
-    dnf clean all 2>/dev/null || true
-    
-    # Auto-suppression du service de mise à jour premier démarrage
-    systemctl disable arrera-first-boot-update.service 2>/dev/null || true
-    rm -f /etc/systemd/system/arrera-first-boot-update.service
-    rm -f /usr/libexec/arrera-first-boot-update.sh
-    systemctl daemon-reload 2>/dev/null || true
-fi
-
-exit 0
-UPDATE_SCRIPT_EOF
-
-chmod +x /usr/libexec/arrera-first-boot-update.sh
-
-cat > /etc/systemd/system/arrera-first-boot-update.service <<'UPDATE_SERVICE_EOF'
-[Unit]
-Description=Arrera Linux First Boot Background Update
-After=network-online.target NetworkManager.service
-Wants=network-online.target
-ConditionKernelCommandLine=!rd.live.image
-ConditionPathExists=!/run/initramfs/live
-
-[Service]
-Type=simple
-ExecStart=/usr/libexec/arrera-first-boot-update.sh
-Restart=on-failure
-RestartSec=60
-
-[Install]
-WantedBy=multi-user.target graphical.target
-UPDATE_SERVICE_EOF
-
-systemctl enable arrera-first-boot-update.service 2>/dev/null || true
+# Nettoyage des caches DNF
+dnf clean all 2>/dev/null || true
 
 # Régénération finale de GRUB (si présent)
 if [ -f /etc/default/grub ]; then
