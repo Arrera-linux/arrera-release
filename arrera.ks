@@ -32,7 +32,7 @@ selinux --permissive
 
 url --metalink="https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch"
 repo --name="updates" --metalink="https://mirrors.fedoraproject.org/metalink?repo=updates-released-f$releasever&arch=$basearch" --install --cost=50
-repo --name="copr-arrera-blue" --baseurl="https://download.copr.fedorainfracloud.org/results/arrera-software/arrera_blue/fedora-$releasever-$basearch/" --install --cost=100
+repo --name="copr-arrera-blue" --baseurl="https://download.copr.fedorainfracloud.org/results/arrera-software/arrera_blue/fedora-$releasever-$basearch/" --cost=100 --install
 
 # Partitionnement (taille fixe requise par livemedia-creator --no-virt)
 zerombr
@@ -136,6 +136,7 @@ bzip2
 btop
 fastfetch
 bash-completion
+flatpak
 
 # Python et Qt
 python3
