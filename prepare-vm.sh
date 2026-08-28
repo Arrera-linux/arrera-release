@@ -1,8 +1,9 @@
+#!/bin/bash
 # ==============================================================================
 # Préparation de la VM pour la compilation de l'ISO Arrera Linux
 # ==============================================================================
 #
-# Ce script prépare une VM Fedora fraîche pour compiler l'ISO Arrera Linux.
+# Ce script prépare une VM Fedora fraîche (x86_64 ou aarch64/ARM64) pour compiler.
 # À exécuter UNE SEULE FOIS sur la VM avant de lancer build_iso.sh.
 #
 # Usage :
@@ -10,7 +11,6 @@
 #
 # ==============================================================================
 
-#!/bin/bash
 set -euo pipefail
 
 if [ "$EUID" -ne 0 ]; then
@@ -18,8 +18,11 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+ARCH="$(uname -m)"
+
 echo "=========================================="
 echo " Préparation de la VM de compilation      "
+echo " Architecture détectée : $ARCH            "
 echo "=========================================="
 
 # 1. Mise à jour du système
@@ -27,21 +30,47 @@ echo "[1/4] Mise à jour du système..."
 dnf upgrade -y --refresh
 
 # 2. Installation des outils de création d'ISO
-echo "[2/4] Installation des outils de compilation..."
-dnf install -y \
-    lorax \
-    livecd-tools \
-    anaconda \
-    pykickstart \
-    squashfs-tools \
-    genisoimage \
-    isomd5sum \
-    syslinux \
-    grub2-pc-modules \
-    grub2-tools-extra \
-    git
+echo "[2/4] Installation des outils de compilation pour $ARCH..."
 
-# 3. Vérification
+COMMON_PKGS=(
+    lorax
+    livecd-tools
+    anaconda
+    pykickstart
+    squashfs-tools
+    genisoimage
+    isomd5sum
+    grub2-tools
+    grub2-tools-extra
+    efibootmgr
+    git
+)
+
+ARCH_PKGS=()
+case "$ARCH" in
+    x86_64|amd64)
+        ARCH_PKGS=(
+            syslinux
+            grub2-pc-modules
+            grub2-efi-x64-modules
+            shim-x64
+        )
+        ;;
+    aarch64|arm64)
+        ARCH_PKGS=(
+            grub2-efi-aa64-modules
+            grub2-efi-aa64-cdboot
+            shim-aa64
+        )
+        ;;
+    *)
+        echo "Avertissement : Architecture $ARCH non standard, installation des paquets génériques."
+        ;;
+esac
+
+dnf install -y "${COMMON_PKGS[@]}" "${ARCH_PKGS[@]}"
+
+# 3. Vérification des binaires
 echo "[3/4] Vérification de l'installation..."
 echo ""
 
@@ -73,13 +102,10 @@ echo ""
 
 if [ "$ALL_OK" = true ]; then
     echo "=========================================="
-    echo " ✅ VM prête ! Vous pouvez maintenant :   "
+    echo " ✅ VM ($ARCH) prête pour la compilation !"
     echo "                                          "
-    echo "   1. Cloner le repo :                    "
-    echo "      git clone <url> && cd arrera-release"
-    echo "                                          "
-    echo "   2. Lancer la compilation :             "
-    echo "      sudo ./build_iso.sh                 "
+    echo " Lancez la compilation avec :             "
+    echo "   sudo ./build_iso.sh                    "
     echo "=========================================="
 else
     echo "=========================================="
