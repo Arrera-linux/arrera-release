@@ -156,6 +156,17 @@ COPR_REPO_EOF
 # Importer la clé publique GPG officielle du Copr Arrera
 rpm --import https://download.copr.fedorainfracloud.org/results/arrera-software/arrera_blue/pubkey.gpg 2>/dev/null || true
 
+# Configuration native du dépôt Flathub et préinstallation des applications Flatpak
+if command -v flatpak &>/dev/null; then
+    echo "Configuration de Flathub et installation des applications Flatpak..."
+    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
+    flatpak install -y --noninteractive flathub \
+        it.mijorus.gearlever \
+        io.missioncenter.MissionCenter \
+        io.github.flattool.Warehouse \
+        com.github.tchx84.Flatseal 2>/dev/null || true
+fi
+
 cat > /usr/libexec/arrera-branding-guard.sh <<'GUARD_EOF'
 #!/bin/bash
 # Arrera Branding Guard : Restaure automatiquement l'identité Arrera après toute mise à jour

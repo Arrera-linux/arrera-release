@@ -136,6 +136,7 @@ bzip2
 btop
 fastfetch
 bash-completion
+flatpak
 
 # Python et Qt
 python3
