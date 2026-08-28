@@ -167,6 +167,32 @@ if command -v flatpak &>/dev/null; then
         com.github.tchx84.Flatseal 2>/dev/null || true
 fi
 
+# Configuration par défaut de Firefox (Page d'accueil épurée avec barre de recherche uniquement, aucun favori/raccourci)
+echo "Configuration des politiques par défaut de Firefox..."
+mkdir -p /etc/firefox/policies /usr/lib64/firefox/distribution /usr/lib/firefox/distribution 2>/dev/null || true
+
+cat > /etc/firefox/policies/policies.json <<'FIREFOX_EOF'
+{
+  "policies": {
+    "DisplayBookmarksToolbar": "never",
+    "NoDefaultBookmarks": true,
+    "FirefoxHome": {
+      "Search": true,
+      "TopSites": false,
+      "SponsoredTopSites": false,
+      "Highlights": false,
+      "Pocket": false,
+      "SponsoredPocket": false,
+      "Snippets": false,
+      "Locked": false
+    }
+  }
+}
+FIREFOX_EOF
+
+cp -f /etc/firefox/policies/policies.json /usr/lib64/firefox/distribution/policies.json 2>/dev/null || true
+cp -f /etc/firefox/policies/policies.json /usr/lib/firefox/distribution/policies.json 2>/dev/null || true
+
 cat > /usr/libexec/arrera-branding-guard.sh <<'GUARD_EOF'
 #!/bin/bash
 # Arrera Branding Guard : Restaure automatiquement l'identité Arrera après toute mise à jour
