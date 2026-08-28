@@ -22,6 +22,7 @@ set -euo pipefail
 # Détection de l'architecture (x86_64 ou aarch64)
 # --------------------------------------------------------------------------
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 HOST_ARCH="$(uname -m)"
 TARGET_ARCH="${1:-$HOST_ARCH}"
 
