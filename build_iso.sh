@@ -19,19 +19,37 @@
 set -euo pipefail
 
 # --------------------------------------------------------------------------
-# Variables
+# Détection de l'architecture (x86_64 ou aarch64)
 # --------------------------------------------------------------------------
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-KS_TEMPLATE="$SCRIPT_DIR/arrera.ks"
+HOST_ARCH="$(uname -m)"
+TARGET_ARCH="${1:-$HOST_ARCH}"
+
+case "$TARGET_ARCH" in
+    x86_64|amd64|x86)
+        ARCH="x86_64"
+        KS_TEMPLATE="$SCRIPT_DIR/arrera_x86.ks"
+        ISO_NAME="Arrera-Blue-dev-2026-x86_64.iso"
+        VOLID="Arrera_Blue_2026_x86_64"
+        ;;
+    aarch64|arm64|arm)
+        ARCH="aarch64"
+        KS_TEMPLATE="$SCRIPT_DIR/arrera_arm64.ks"
+        ISO_NAME="Arrera-Blue-dev-2026-aarch64.iso"
+        VOLID="Arrera_Blue_2026_arm64"
+        ;;
+    *)
+        echo -e "\e[1;31m[ERROR]\e[0m Architecture non supportée : $TARGET_ARCH (supportées: x86_64, aarch64)"
+        exit 1
+        ;;
+esac
+
 SETUP_SCRIPT="$SCRIPT_DIR/setup-dev-env.sh"
 
 BUILD_DIR="/var/tmp/arrera-build"
 RESULT_DIR="/var/tmp/arrera-iso"
 KS_FINAL="$BUILD_DIR/arrera-final.ks"
 LMC_LOG="$BUILD_DIR/livemedia.log"
-ISO_NAME="Arrera-Blue-dev-2026.iso"
-VOLID="Arrera_Blue_dev_2026"
 
 # --------------------------------------------------------------------------
 # Fonctions utilitaires
@@ -46,7 +64,7 @@ error() { echo -e "\e[1;31m[ERROR]\e[0m $*"; exit 1; }
 # 1. Vérifications préalables
 # --------------------------------------------------------------------------
 
-info "=== Arrera Linux ISO Builder ==="
+info "=== Arrera Linux ISO Builder [Architecture: $ARCH] ==="
 echo ""
 
 # Root ?
@@ -242,7 +260,11 @@ if [ $BUILD_STATUS -eq 0 ] && [ -f "$RESULT_DIR/$ISO_NAME" ]; then
     info "  Durée   : ${BUILD_MINS}m ${BUILD_SECS}s"
     echo ""
     info "Pour tester, lancez dans une VM :"
-    info "  qemu-system-x86_64 -m 4096 -cdrom $RESULT_DIR/$ISO_NAME -boot d"
+    if [ "$ARCH" = "x86_64" ]; then
+        info "  qemu-system-x86_64 -m 4096 -cdrom $RESULT_DIR/$ISO_NAME -boot d"
+    else
+        info "  qemu-system-aarch64 -m 4096 -cpu cortex-a57 -M virt -bios /usr/share/edk2/aarch64/QEMU_EFI.fd -cdrom $RESULT_DIR/$ISO_NAME"
+    fi
     echo "==================================================="
 else
     echo "==================================================="
