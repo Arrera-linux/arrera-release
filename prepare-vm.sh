@@ -91,10 +91,10 @@ echo ""
 # 4. Vérification de l'espace disque
 echo "[4/4] Vérification de l'espace disque..."
 AVAILABLE_GB=$(df --output=avail /var/tmp | tail -1 | awk '{printf "%.0f", $1/1048576}')
-if [ "$AVAILABLE_GB" -ge 10 ]; then
-    echo "  ✅ Espace disque : ${AVAILABLE_GB} Go disponible (minimum 10 Go)"
+if [ "$AVAILABLE_GB" -ge 20 ]; then
+    echo "  ✅ Espace disque : ${AVAILABLE_GB} Go disponible (minimum 20 Go)"
 else
-    echo "  ⚠️  Espace disque : ${AVAILABLE_GB} Go disponible — INSUFFISANT (minimum 10 Go)"
+    echo "  ⚠️  Espace disque : ${AVAILABLE_GB} Go disponible — INSUFFISANT (minimum 20 Go requis pour la compilation)"
     ALL_OK=false
 fi
 

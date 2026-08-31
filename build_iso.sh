@@ -97,11 +97,11 @@ else
     ok "Tous les outils sont disponibles."
 fi
 
-# Espace disque (minimum 10 Go dans /var/tmp)
+# Espace disque (minimum 20 Go dans /var/tmp)
 info "Vérification de l'espace disque..."
 AVAILABLE_GB=$(df --output=avail /var/tmp 2>/dev/null | tail -1 | awk '{printf "%.0f", $1/1048576}')
-if [ "$AVAILABLE_GB" -lt 10 ]; then
-    error "Espace insuffisant dans /var/tmp : ${AVAILABLE_GB} Go disponible, 10 Go minimum requis."
+if [ "$AVAILABLE_GB" -lt 20 ]; then
+    error "Espace insuffisant dans /var/tmp : ${AVAILABLE_GB} Go disponible, 20 Go minimum requis (pour l'installation, le squashfs et l'ISO)."
 fi
 ok "Espace disque suffisant (${AVAILABLE_GB} Go disponible)."
 
