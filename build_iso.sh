@@ -223,6 +223,7 @@ livemedia-creator \
     --iso-only \
     --iso-name "$ISO_NAME" \
     --releasever 44 \
+    --nomacboot \
     --logfile "$LMC_LOG" \
     --extra-boot-args "rhgb quiet rd.live.image"
 
