@@ -68,6 +68,57 @@ mkdir -p /usr/share/arrera-branding
 cp /usr/lib/os-release /usr/share/arrera-branding/os-release 2>/dev/null || true
 cp /etc/arrera-release /usr/share/arrera-branding/arrera-release 2>/dev/null || true
 
+# Profil Anaconda pour « arrera » — indispensable pour que l'installeur
+# reconnaisse l'OS et utilise le bon répertoire EFI (/boot/efi/EFI/fedora/)
+# Sans ce fichier, gen_grub_cfgstub échoue à l'installation du bootloader.
+mkdir -p /etc/anaconda/profile.d
+cat <<'ANACONDA_PROFILE_EOF' > /etc/anaconda/profile.d/arrera.conf
+# Anaconda configuration file for Arrera Linux.
+
+[Profile]
+# Define the profile.
+profile_id = arrera
+
+[Profile Detection]
+# Match os-release values.
+os_id = arrera
+
+[Network]
+default_on_boot = FIRST_WIRED_WITH_LINK
+
+[Bootloader]
+efi_dir = fedora
+
+[Storage]
+default_scheme = BTRFS
+btrfs_compression = zstd:1
+
+[User Interface]
+custom_stylesheet = /usr/share/anaconda/pixmaps/fedora.css
+ANACONDA_PROFILE_EOF
+
+cat <<'ANACONDA_WS_PROFILE_EOF' > /etc/anaconda/profile.d/arrera-workstation.conf
+# Anaconda configuration file for Arrera Workstation.
+
+[Profile]
+# Define the profile.
+profile_id = arrera-workstation
+base_profile = arrera
+
+[Profile Detection]
+# Match os-release values.
+os_id = arrera
+variant_id = workstation
+
+[Payload]
+default_environment = workstation-product-environment
+
+[Bootloader]
+menu_auto_hide = True
+ANACONDA_WS_PROFILE_EOF
+
+echo "  ✅ Profils Anaconda arrera créés dans /etc/anaconda/profile.d/"
+
 # ------------------------------------------------------------------------------
 # 2. Configuration du chargeur d'amorçage GRUB et des hooks noyau
 # ------------------------------------------------------------------------------
