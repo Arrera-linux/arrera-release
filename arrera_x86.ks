@@ -64,7 +64,11 @@ grub2-efi-x64-modules
 shim-x64
 grub2-pc-modules
 grub2-tools
+grub2-tools-extra
+grubby
 efibootmgr
+efivar
+dosfstools
 
 # === Claviers et langues complètes ===
 xkeyboard-config
