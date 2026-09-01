@@ -1,5 +1,5 @@
 # ==============================================================================
-# Arrera Linux - Kickstart autonome basé sur Fedora Workstation
+# Arrera Linux - Kickstart x86_64 (Intel / AMD 64-bit)
 # ==============================================================================
 # IMPORTANT : Ce fichier est un TEMPLATE.
 # Le script build_iso.sh injecte setup-dev-env.sh et génère le .ks final.
@@ -18,7 +18,7 @@ keyboard --vckeymap=fr --xlayouts='fr'
 timezone Europe/Paris --utc
 
 network --bootproto=dhcp --device=link --activate
-network --hostname=arrera-linux
+network --hostname=arrera
 
 # Compte utilisateur
 rootpw --lock
@@ -55,7 +55,7 @@ services --enabled=NetworkManager,gdm,firewalld
 @core
 @hardware-support
 
-# Noyau et démarrage
+# Noyau et démarrage (x86_64 UEFI + BIOS)
 kernel
 dracut-live
 grub2-efi-x64
@@ -64,7 +64,11 @@ grub2-efi-x64-modules
 shim-x64
 grub2-pc-modules
 grub2-tools
+grub2-tools-extra
+grubby
 efibootmgr
+efivar
+dosfstools
 
 # === Claviers et langues complètes ===
 xkeyboard-config

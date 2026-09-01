@@ -34,9 +34,9 @@ VERSION_ID=2026
 VERSION_CODENAME="Blue-dev"
 PRETTY_NAME="Arrera Blue-dev 2026"
 ANSI_COLOR="0;38;2;60;110;180"
-LOGO="arrera-logo"
+LOGO="fedora-logo-text"
 CPE_NAME="cpe:/o:arrera:arrera:2026"
-DEFAULT_HOSTNAME="arrera-blue"
+DEFAULT_HOSTNAME="arrera"
 HOME_URL="https://arrera.org/"
 DOCUMENTATION_URL="https://arrera.org/"
 SUPPORT_URL="https://arrera.org/"
@@ -54,7 +54,7 @@ rm -f /etc/os-release
 cp /usr/lib/os-release /etc/os-release
 
 # Nom d'hôte par défaut
-echo "arrera-blue" > /etc/hostname
+echo "arrera" > /etc/hostname
 
 # Création du fichier de release et des liens de compatibilité
 echo "Arrera Blue-dev 2026" > /etc/arrera-release
@@ -67,6 +67,57 @@ done
 mkdir -p /usr/share/arrera-branding
 cp /usr/lib/os-release /usr/share/arrera-branding/os-release 2>/dev/null || true
 cp /etc/arrera-release /usr/share/arrera-branding/arrera-release 2>/dev/null || true
+
+# Profil Anaconda pour « arrera » — indispensable pour que l'installeur
+# reconnaisse l'OS et utilise le bon répertoire EFI (/boot/efi/EFI/fedora/)
+# Sans ce fichier, gen_grub_cfgstub échoue à l'installation du bootloader.
+mkdir -p /etc/anaconda/profile.d
+cat <<'ANACONDA_PROFILE_EOF' > /etc/anaconda/profile.d/arrera.conf
+# Anaconda configuration file for Arrera Linux.
+
+[Profile]
+# Define the profile.
+profile_id = arrera
+
+[Profile Detection]
+# Match os-release values.
+os_id = arrera
+
+[Network]
+default_on_boot = FIRST_WIRED_WITH_LINK
+
+[Bootloader]
+efi_dir = fedora
+
+[Storage]
+default_scheme = BTRFS
+btrfs_compression = zstd:1
+
+[User Interface]
+custom_stylesheet = /usr/share/anaconda/pixmaps/fedora.css
+ANACONDA_PROFILE_EOF
+
+cat <<'ANACONDA_WS_PROFILE_EOF' > /etc/anaconda/profile.d/arrera-workstation.conf
+# Anaconda configuration file for Arrera Workstation.
+
+[Profile]
+# Define the profile.
+profile_id = arrera-workstation
+base_profile = arrera
+
+[Profile Detection]
+# Match os-release values.
+os_id = arrera
+variant_id = workstation
+
+[Payload]
+default_environment = workstation-product-environment
+
+[Bootloader]
+menu_auto_hide = True
+ANACONDA_WS_PROFILE_EOF
+
+echo "  ✅ Profils Anaconda arrera créés dans /etc/anaconda/profile.d/"
 
 # ------------------------------------------------------------------------------
 # 2. Configuration du chargeur d'amorçage GRUB et des hooks noyau
@@ -166,6 +217,32 @@ if command -v flatpak &>/dev/null; then
         io.github.flattool.Warehouse \
         com.github.tchx84.Flatseal 2>/dev/null || true
 fi
+
+# Configuration par défaut de Firefox (Page d'accueil épurée avec barre de recherche uniquement, aucun favori/raccourci)
+echo "Configuration des politiques par défaut de Firefox..."
+mkdir -p /etc/firefox/policies /usr/lib64/firefox/distribution /usr/lib/firefox/distribution 2>/dev/null || true
+
+cat > /etc/firefox/policies/policies.json <<'FIREFOX_EOF'
+{
+  "policies": {
+    "DisplayBookmarksToolbar": "never",
+    "NoDefaultBookmarks": true,
+    "FirefoxHome": {
+      "Search": true,
+      "TopSites": false,
+      "SponsoredTopSites": false,
+      "Highlights": false,
+      "Pocket": false,
+      "SponsoredPocket": false,
+      "Snippets": false,
+      "Locked": false
+    }
+  }
+}
+FIREFOX_EOF
+
+cp -f /etc/firefox/policies/policies.json /usr/lib64/firefox/distribution/policies.json 2>/dev/null || true
+cp -f /etc/firefox/policies/policies.json /usr/lib/firefox/distribution/policies.json 2>/dev/null || true
 
 cat > /usr/libexec/arrera-branding-guard.sh <<'GUARD_EOF'
 #!/bin/bash
