@@ -18,7 +18,7 @@ keyboard --vckeymap=fr --xlayouts='fr'
 timezone Europe/Paris --utc
 
 network --bootproto=dhcp --device=link --activate
-network --hostname=arrera-linux
+network --hostname=arrera
 
 # Compte utilisateur
 rootpw --lock

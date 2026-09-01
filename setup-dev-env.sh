@@ -34,9 +34,9 @@ VERSION_ID=2026
 VERSION_CODENAME="Blue-dev"
 PRETTY_NAME="Arrera Blue-dev 2026"
 ANSI_COLOR="0;38;2;60;110;180"
-LOGO="arrera-logo"
+LOGO="fedora-logo-text"
 CPE_NAME="cpe:/o:arrera:arrera:2026"
-DEFAULT_HOSTNAME="arrera-blue"
+DEFAULT_HOSTNAME="arrera"
 HOME_URL="https://arrera.org/"
 DOCUMENTATION_URL="https://arrera.org/"
 SUPPORT_URL="https://arrera.org/"
@@ -54,7 +54,7 @@ rm -f /etc/os-release
 cp /usr/lib/os-release /etc/os-release
 
 # Nom d'hôte par défaut
-echo "arrera-blue" > /etc/hostname
+echo "arrera" > /etc/hostname
 
 # Création du fichier de release et des liens de compatibilité
 echo "Arrera Blue-dev 2026" > /etc/arrera-release
