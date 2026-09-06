@@ -94,13 +94,19 @@ default_scheme = BTRFS
 btrfs_compression = zstd:1
 
 [User Interface]
-custom_stylesheet = /usr/share/anaconda/pixmaps/workstation/arrera-workstation.css
+custom_stylesheet = /usr/share/anaconda/pixmaps/workstation/fedora-workstation.css
 ANACONDA_PROFILE_EOF
 
-# Forcer le CSS Arrera dans Anaconda workstation (écrase fedora-workstation.css)
-if [ -f /usr/share/anaconda/pixmaps/workstation/arrera-workstation.css ]; then
-    cp -f /usr/share/anaconda/pixmaps/workstation/arrera-workstation.css \
+# Forcer le CSS Arrera dans Anaconda workstation (copie depuis /usr/share/arrera/anaconda/ - pas de conflit RPM)
+if [ -f /usr/share/arrera/anaconda/workstation/arrera-workstation.css ]; then
+    cp -f /usr/share/arrera/anaconda/workstation/arrera-workstation.css \
         /usr/share/anaconda/pixmaps/workstation/fedora-workstation.css 2>/dev/null || true
+fi
+# Copier aussi les images Arrera dans le répertoire Anaconda
+if [ -d /usr/share/arrera/anaconda/workstation ] && [ -d /usr/share/anaconda/pixmaps/workstation ]; then
+    cp -f /usr/share/arrera/anaconda/workstation/sidebar-logo.png /usr/share/anaconda/pixmaps/workstation/sidebar-logo.png 2>/dev/null || true
+    cp -f /usr/share/arrera/anaconda/workstation/sidebar-bg.png /usr/share/anaconda/pixmaps/workstation/sidebar-bg.png 2>/dev/null || true
+    cp -f /usr/share/arrera/anaconda/workstation/topbar-bg.png /usr/share/anaconda/pixmaps/workstation/topbar-bg.png 2>/dev/null || true
 fi
 
 cat <<'ANACONDA_WS_PROFILE_EOF' > /etc/anaconda/profile.d/arrera-workstation.conf
