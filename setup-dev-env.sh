@@ -288,6 +288,24 @@ GUARD_SERVICE_EOF
 
 systemctl enable arrera-branding-guard.service 2>/dev/null || true
 
+# Activation permanente du bouton 'Fermer la session' (Log Out) dans le menu GNOME
+# 1. Garantir que le profil dconf utilisateur existe et référence la base local
+mkdir -p /etc/dconf/profile
+cat > /etc/dconf/profile/user <<'DCONF_PROFILE_EOF'
+user-db:user
+system-db:local
+DCONF_PROFILE_EOF
+
+# 2. Écrire la règle dconf pour forcer l'affichage du bouton Log Out
+mkdir -p /etc/dconf/db/local.d
+cat > /etc/dconf/db/local.d/04-arrera-shell <<'SHELL_EOF'
+[org/gnome/shell]
+always-show-log-out=true
+SHELL_EOF
+
+# 3. Compiler la base dconf
+dconf update 2>/dev/null || true
+
 # ------------------------------------------------------------------------------
 # 5. Service de nettoyage post-installation (exécuté 1 seule fois sur disque)
 # ------------------------------------------------------------------------------

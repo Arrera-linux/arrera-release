@@ -92,7 +92,7 @@ ibus-typing-booster
 gnome-shell
 gnome-session
 gnome-settings-daemon
-gnome-control-center
+arrera-gnome-control-center
 mutter
 gdm
 gnome-keyring
@@ -113,6 +113,7 @@ gnome-calendar
 gnome-clocks
 gnome-weather
 ptyxis
+gnome-screenshot
 
 # === Partage de fichiers Windows (SMB/CIFS) ===
 gvfs-smb
@@ -123,6 +124,7 @@ cifs-utils
 gnome-shell-extension-appindicator
 gnome-shell-extension-forge
 gnome-shell-extension-gpaste
+gnome-shell-extension-arrera-dock
 
 # === Outils système ===
 sudo
