@@ -94,8 +94,14 @@ default_scheme = BTRFS
 btrfs_compression = zstd:1
 
 [User Interface]
-custom_stylesheet = /usr/share/anaconda/pixmaps/fedora.css
+custom_stylesheet = /usr/share/anaconda/pixmaps/workstation/arrera-workstation.css
 ANACONDA_PROFILE_EOF
+
+# Forcer le CSS Arrera dans Anaconda workstation (écrase fedora-workstation.css)
+if [ -f /usr/share/anaconda/pixmaps/workstation/arrera-workstation.css ]; then
+    cp -f /usr/share/anaconda/pixmaps/workstation/arrera-workstation.css \
+        /usr/share/anaconda/pixmaps/workstation/fedora-workstation.css 2>/dev/null || true
+fi
 
 cat <<'ANACONDA_WS_PROFILE_EOF' > /etc/anaconda/profile.d/arrera-workstation.conf
 # Anaconda configuration file for Arrera Workstation.
