@@ -105,6 +105,7 @@ fi
 # Copier aussi les images Arrera dans le répertoire Anaconda
 if [ -d /usr/share/arrera/anaconda/workstation ] && [ -d /usr/share/anaconda/pixmaps/workstation ]; then
     cp -f /usr/share/arrera/anaconda/workstation/sidebar-logo.png /usr/share/anaconda/pixmaps/workstation/sidebar-logo.png 2>/dev/null || true
+    cp -f /usr/share/arrera/anaconda/workstation/sidebar-logo_flavor.png /usr/share/anaconda/pixmaps/workstation/sidebar-logo_flavor.png 2>/dev/null || true
     cp -f /usr/share/arrera/anaconda/workstation/sidebar-bg.png /usr/share/anaconda/pixmaps/workstation/sidebar-bg.png 2>/dev/null || true
     cp -f /usr/share/arrera/anaconda/workstation/topbar-bg.png /usr/share/anaconda/pixmaps/workstation/topbar-bg.png 2>/dev/null || true
 fi
