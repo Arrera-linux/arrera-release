@@ -110,6 +110,23 @@ if [ -d /usr/share/arrera/anaconda/workstation ] && [ -d /usr/share/anaconda/pix
     cp -f /usr/share/arrera/anaconda/workstation/topbar-bg.png /usr/share/anaconda/pixmaps/workstation/topbar-bg.png 2>/dev/null || true
 fi
 
+# Remplacement de l'icône d'application Anaconda (pour le bureau, le dock et la barre de titre)
+if [ -f /usr/share/arrera/anaconda/workstation/anaconda.png ]; then
+    mkdir -p /usr/share/icons/hicolor/256x256/apps
+    cp -f /usr/share/arrera/anaconda/workstation/anaconda.png /usr/share/icons/hicolor/256x256/apps/anaconda.png 2>/dev/null || true
+    cp -f /usr/share/arrera/anaconda/workstation/anaconda.png /usr/share/pixmaps/anaconda.png 2>/dev/null || true
+    find /usr/share/icons -type f \( -iname "*anaconda*.png" -o -iname "*AnacondaInstaller*.png" \) -exec cp -f /usr/share/arrera/anaconda/workstation/anaconda.png {} \; 2>/dev/null || true
+fi
+if [ -f /usr/share/arrera/anaconda/workstation/anaconda.svg ]; then
+    cp -f /usr/share/arrera/anaconda/workstation/anaconda.svg /usr/share/pixmaps/anaconda.svg 2>/dev/null || true
+    find /usr/share/icons -type f \( -iname "*anaconda*.svg" -o -iname "*AnacondaInstaller*.svg" \) -exec cp -f /usr/share/arrera/anaconda/workstation/anaconda.svg {} \; 2>/dev/null || true
+fi
+if [ -x /usr/bin/gtk-update-icon-cache ]; then
+    for theme_dir in /usr/share/icons/*; do
+        [ -d "$theme_dir" ] && /usr/bin/gtk-update-icon-cache -f -t "$theme_dir" &>/dev/null || true
+    done
+fi
+
 cat <<'ANACONDA_WS_PROFILE_EOF' > /etc/anaconda/profile.d/arrera-workstation.conf
 # Anaconda configuration file for Arrera Workstation.
 
@@ -224,11 +241,19 @@ rpm --import https://download.copr.fedorainfracloud.org/results/arrera-software/
 if command -v flatpak &>/dev/null; then
     echo "Configuration de Flathub et installation des applications Flatpak..."
     flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
-    flatpak install -y --noninteractive flathub \
-        it.mijorus.gearlever \
-        io.missioncenter.MissionCenter \
-        io.github.flattool.Warehouse \
-        com.github.tchx84.Flatseal 2>/dev/null || true
+    if [ "$(uname -m)" = "x86_64" ]; then
+        flatpak install -y --noninteractive flathub \
+            it.mijorus.gearlever \
+            io.missioncenter.MissionCenter \
+            io.github.flattool.Warehouse \
+            com.github.tchx84.Flatseal 2>/dev/null || true
+    else
+        flatpak install -y --noninteractive flathub \
+            io.missioncenter.MissionCenter \
+            io.github.flattool.Warehouse \
+            com.github.tchx84.Flatseal 2>/dev/null || true
+    fi
+    pkill -9 -f flatpak 2>/dev/null || true
 fi
 
 # Configuration par défaut de Firefox (Page d'accueil épurée avec barre de recherche uniquement, aucun favori/raccourci)
@@ -402,6 +427,18 @@ if [ -f /etc/default/grub ]; then
     echo "Régénération de grub.cfg..."
     grub2-mkconfig -o /boot/grub2/grub.cfg 2>/dev/null || true
 fi
+
+# Quitter tout sous-dossier et revenir à la racine (évite de garder /tmp occupé)
+cd /
+
+# Tuer les processus d'arrière-plan résiduels qui maintiennent /tmp occupé (cause de l'erreur umount /mnt/sysimage/tmp code 32)
+pkill -9 -f gpg-agent 2>/dev/null || true
+pkill -9 -f dconf-service 2>/dev/null || true
+pkill -9 -f flatpak 2>/dev/null || true
+pkill -9 -f systemd 2>/dev/null || true
+
+# Synchroniser les écritures sur disque
+sync
 
 echo "=========================================="
 echo " Terminé ! L'environnement est configuré. "

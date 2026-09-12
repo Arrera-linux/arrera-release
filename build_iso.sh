@@ -147,7 +147,14 @@ ok "Vérification des placeholders OK."
 # 5. Nettoyage de l'ancien résultat et des dossiers temporaires
 # --------------------------------------------------------------------------
 
-info "Nettoyage des fichiers temporaires des builds précédents dans /var/tmp..."
+info "Nettoyage des fichiers temporaires et des montages résiduels..."
+for mp in /mnt/sysimage/tmp /mnt/sysimage/dev /mnt/sysimage/proc /mnt/sysimage/sys /mnt/sysimage; do
+    if mountpoint -q "$mp" 2>/dev/null; then
+        warn "Démontage résiduel de $mp..."
+        fuser -km "$mp" 2>/dev/null || true
+        umount -l "$mp" 2>/dev/null || true
+    fi
+done
 rm -rf /var/tmp/lmc-work-* /var/tmp/lorax.imgutils.* /var/tmp/lmc-disk-* /var/tmp/lmc-* "$RESULT_DIR" 2>/dev/null || true
 dnf clean all 2>/dev/null || true
 
@@ -201,8 +208,17 @@ progress_reporter() {
 # Démarrage du reporter en arrière-plan
 progress_reporter "$BUILD_START_TIME" &
 PROGRESS_PID=$!
-# S'assurer que le reporter est tué à la fin (même en cas d'erreur)
-trap "kill $PROGRESS_PID 2>/dev/null; wait $PROGRESS_PID 2>/dev/null" EXIT
+# S'assurer que le reporter est tué et que les montages sont nettoyés (même en cas d'erreur)
+cleanup() {
+    kill "$PROGRESS_PID" 2>/dev/null || true
+    for mp in /mnt/sysimage/tmp /mnt/sysimage/dev /mnt/sysimage/proc /mnt/sysimage/sys /mnt/sysimage; do
+        if mountpoint -q "$mp" 2>/dev/null; then
+            fuser -km "$mp" 2>/dev/null || true
+            umount -l "$mp" 2>/dev/null || true
+        fi
+    done
+}
+trap cleanup EXIT
 
 info "📦 Phase 1/3 : Installation du système (Anaconda + kickstart)..."
 info "📦 Phase 2/3 : Création du système de fichiers compressé (squashfs)..."
